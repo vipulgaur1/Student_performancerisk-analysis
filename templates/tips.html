@@ -1,0 +1,29 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div style="margin-bottom: 1rem;">
+    <a href="#" onclick="history.back()" style="text-decoration: none; color: var(--text-muted);">&larr; Back to Profile</a>
+</div>
+
+<div class="card" style="border-top: 4px solid var(--warning);">
+    <h2 style="margin-top: 0; color: var(--warning);">Performance Improvement Tips</h2>
+    <p>This student is categorized as <strong>Average</strong>. With slight optimizations, they have the potential to reach the Advanced category.</p>
+    
+    <div class="grid" style="margin-top: 2rem;">
+        <div style="padding: 1.5rem; border: 1px solid var(--border); border-radius: 0.5rem;">
+            <h4 style="margin-top: 0;">1. Consistency is Key</h4>
+            <p style="color: var(--text-muted); font-size: 0.875rem;">Aim to increase attendance by 10%. Consistent lecture attendance correlates highly with scoring above 70% in mid-terms.</p>
+        </div>
+        
+        <div style="padding: 1.5rem; border: 1px solid var(--border); border-radius: 0.5rem;">
+            <h4 style="margin-top: 0;">2. Engage More</h4>
+            <p style="color: var(--text-muted); font-size: 0.875rem;">Increase active participation. Logging more doubts and clearing them with TAs can bridge the gap from a 60 to an 80 on exams.</p>
+        </div>
+        
+        <div style="padding: 1.5rem; border: 1px solid var(--border); border-radius: 0.5rem;">
+            <h4 style="margin-top: 0;">3. Advanced Problem Sets</h4>
+            <p style="color: var(--text-muted); font-size: 0.875rem;">Instead of only doing standard assignments, attempt the optional/bonus questions to build deeper conceptual clarity.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

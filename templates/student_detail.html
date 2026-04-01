@@ -1,0 +1,139 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div style="margin-bottom: 1rem;">
+    <a href="/" style="text-decoration: none; color: var(--text-muted);">&larr; Back to Dashboard</a>
+</div>
+
+<div class="grid" style="align-items: start;">
+    <!-- Profile Card -->
+    <div class="card">
+        <h2 style="margin-top: 0; border-bottom: 1px solid var(--border); padding-bottom: 1rem;">Student Profile</h2>
+        <div style="margin-bottom: 1rem;">
+            <p style="color: var(--text-muted); margin: 0; font-size: 0.875rem;">ID</p>
+            <p style="margin: 0.25rem 0 1rem 0; font-weight: 500;">{{ student.id }}</p>
+            
+            <p style="color: var(--text-muted); margin: 0; font-size: 0.875rem;">Name</p>
+            <p style="margin: 0.25rem 0 1rem 0; font-weight: 500;">{{ student.name }}</p>
+            
+            <p style="color: var(--text-muted); margin: 0; font-size: 0.875rem;">Program</p>
+            <p style="margin: 0.25rem 0 1rem 0; font-weight: 500;">{{ student.branch }} - Year {{ student.year }}, Semester {{ student.semester }}</p>
+        </div>
+    </div>
+
+    <!-- Prediction Card — wired directly to student.* columns -->
+    <div class="card">
+        <h2 style="margin-top: 0; border-bottom: 1px solid var(--border); padding-bottom: 1rem;">ML Prediction Results</h2>
+
+        {% if student.predicted_category %}
+            <div style="margin-bottom: 1.5rem; display: flex; align-items: baseline; gap: 1rem;">
+                <p style="margin: 0; font-size: 1.125rem;">Category:</p>
+                {% if student.predicted_category == 'Weak' %}
+                    <span class="badge bg-danger" style="font-size: 1rem; padding: 0.4rem 1rem;">Weak</span>
+                {% elif student.predicted_category == 'Average' %}
+                    <span class="badge bg-warning" style="font-size: 1rem; padding: 0.4rem 1rem;">Average</span>
+                {% else %}
+                    <span class="badge bg-success" style="font-size: 1rem; padding: 0.4rem 1rem;">Advanced</span>
+                {% endif %}
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <p style="color: var(--text-muted); margin: 0; font-size: 0.875rem;">Model Confidence</p>
+                <div style="background-color: var(--surface); border-radius: 9999px; height: 0.75rem; margin-top: 0.5rem; overflow: hidden; border: 1px solid var(--border);">
+                    <div style="height: 100%; width: {{ student.confidence if student.confidence else 0 }}%; background-color: var(--primary); border-radius: 9999px;"></div>
+                </div>
+                <p style="text-align: right; margin: 0.25rem 0; font-size: 0.75rem; color: var(--muted);">
+                    {{ "%.1f"|format(student.confidence) if student.confidence else 'N/A' }}%
+                </p>
+            </div>
+
+            <div style="margin-bottom: 1.5rem; padding: 1rem; background-color: var(--surface); border-radius: 0.5rem; border: 1px solid var(--border);">
+                <strong style="font-size: 0.875rem;">System Recommendation:</strong>
+                <p style="margin: 0.5rem 0 0 0; font-size: 0.875rem; color: var(--muted);">
+                    {{ student.recommended_action if student.recommended_action else 'N/A' }}
+                </p>
+            </div>
+
+            {% if student.predicted_category == 'Weak' %}
+                <a href="/remedial/{{ student.id }}" class="btn btn-danger" style="width: 100%; text-align: center; display: block;">View Remedial Plan</a>
+            {% elif student.predicted_category == 'Average' %}
+                <a href="/tips" class="btn btn-warning" style="width: 100%; text-align: center; display: block;">View Improvement Tips</a>
+            {% endif %}
+
+        {% else %}
+            <p style="color: var(--text-muted); font-style: italic; font-size: 0.875rem;">
+                No prediction available yet. Run batch prediction from the dashboard.
+            </p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card" style="margin-top: 1.5rem;">
+    <h2 style="margin-top: 0;">Academic Records &amp; Key Metrics</h2>
+    <div style="overflow-x: auto;">
+        <table>
+            <tbody>
+                {# Attendance — DB: attendance (float, 0-100) #}
+                <tr>
+                    <td style="font-weight: 500; width: 40%;">Attendance</td>
+                    <td style="{{ 'color: var(--danger); font-weight: bold;' if student.attendance is not none and student.attendance < 60 else '' }}">
+                        {{ "%.1f"|format(student.attendance) ~ '%' if student.attendance is not none else 'N/A' }}
+                    </td>
+                </tr>
+
+                {# Class Test Score — DB: class_test_score (float, 0-100) #}
+                <tr>
+                    <td style="font-weight: 500;">Class Test Score</td>
+                    <td style="{{ 'color: var(--danger); font-weight: bold;' if student.class_test_score is not none and student.class_test_score < 40 else '' }}">
+                        {{ "%.1f"|format(student.class_test_score) ~ ' / 100' if student.class_test_score is not none else 'N/A' }}
+                    </td>
+                </tr>
+
+                {# Assignment Score — DB: assignment_completion (float, 0-100) #}
+                <tr>
+                    <td style="font-weight: 500;">Assignment Score</td>
+                    <td>
+                        {{ "%.1f"|format(student.assignment_completion) ~ ' / 100' if student.assignment_completion is not none else 'N/A' }}
+                    </td>
+                </tr>
+
+                {# Doubts Logged — DB: doubt_asking (int) #}
+                <tr>
+                    <td style="font-weight: 500;">Doubts Logged</td>
+                    <td>
+                        {{ student.doubt_asking if student.doubt_asking is not none else 'N/A' }}
+                    </td>
+                </tr>
+
+                {# Behavior Score — DB: behaviour (int, 0=Low / 1=Medium / 2=High) #}
+                <tr>
+                    <td style="font-weight: 500;">Behavior Score</td>
+                    <td>
+                        {% if student.behaviour is not none %}
+                            {{ student.behaviour }} / 2 &nbsp;
+                            <span style="font-size: 0.8rem; color: var(--muted);">
+                                ({% if student.behaviour == 0 %}Low{% elif student.behaviour == 1 %}Medium{% else %}High{% endif %})
+                            </span>
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                </tr>
+
+                {# Backlogs — DB: backlogs (int) #}
+                <tr>
+                    <td style="font-weight: 500;">Backlogs</td>
+                    <td style="{{ 'color: var(--danger); font-weight: bold;' if student.backlogs and student.backlogs > 0 else '' }}">
+                        {% if student.backlogs is not none %}
+                            {{ 'Yes (' ~ student.backlogs ~ ')' if student.backlogs > 0 else 'No' }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+

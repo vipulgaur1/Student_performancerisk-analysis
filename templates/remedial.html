@@ -1,0 +1,35 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div style="margin-bottom: 1rem;">
+    <a href="/student/{{ student.id }}" style="text-decoration: none; color: var(--text-muted);">&larr; Back to Student Profile</a>
+</div>
+
+<div class="card" style="border-top: 4px solid var(--danger);">
+    <h2 style="margin-top: 0; color: var(--danger);">Remedial Intervention Plan</h2>
+    <p>This student has been identified as <strong>Weak</strong> and requires targeted intervention to improve before the final exams.</p>
+    
+    <h3 style="margin-top: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">Identified Weak Points</h3>
+    
+    <div style="background-color: var(--bg); padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 1rem; border: 1px solid var(--border);">
+        <ul style="color: var(--text-muted); padding-left: 1.5rem;">
+            {% if student.attendance < 60 %}<li><strong>Low Attendance:</strong> Only {{ student.attendance }}%. Requires immediate counseling to improve consistency.</li>{% endif %}
+            {% if student.class_test_score < 40 %}<li><strong>Low Test Scores:</strong> Only {{ student.class_test_score }}%. Needs 1-on-1 tutoring sessions to focus on core areas.</li>{% endif %}
+            {% if student.doubt_count > 5 %}<li><strong>High Confusion:</strong> {{ student.doubt_count }} doubts logged. Needs fundamental conceptual revision.</li>{% endif %}
+            {% if student.study_hours < 2 %}<li><strong>Low Study Tracking:</strong> Only {{ student.study_hours }} hours/day. Discuss time management techniques.</li>{% endif %}
+            {% if student.backlogs > 0 %}<li><strong>Active Backlogs:</strong> Focus on clearing existing backlogs via targeted crash courses.</li>{% endif %}
+        </ul>
+        {% if student.attendance >= 60 and student.class_test_score >= 40 and student.doubt_count <= 5 and student.study_hours >= 2 and student.backlogs == 0 %}
+            <p>No blatant outliers in standalone metrics, but aggregated performance maps to Weak. General mentorship advised based on ML profile processing.</p>
+        {% endif %}
+    </div>
+    
+    <h3 style="margin-top: 2rem;">General Next Steps</h3>
+    <ul style="line-height: 1.8;">
+        <li>Schedule a meeting with the student and academic counselor.</li>
+        <li>Monitor daily attendance closely for the next 4 weeks.</li>
+        <li>Enroll student in mandatory after-school doubt sessions for the identified weak areas.</li>
+    </ul>
+</div>
+{% endblock %}
+

@@ -1,0 +1,352 @@
+{% extends "layout.html" %}
+{% block page_title %}Dashboard{% endblock %}
+{% block breadcrumb %}Dashboard{% endblock %}
+{% block head_extra %}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+{% set total = counts.get('Weak', 0) + counts.get('Average', 0) + counts.get('Advanced', 0) %}
+
+<!-- Welcome Banner -->
+<div class="welcome-banner">
+  <div>
+    <h1>Welcome back, Admin 👋</h1>
+    <p>Student Early Performance Prediction System &nbsp;·&nbsp; Real-time ML Risk Monitor</p>
+    <div class="welcome-badges">
+      <span class="badge badge-danger">{{ counts.get('Weak', 0) }} At Risk</span>
+      <span class="badge badge-warning">{{ counts.get('Average', 0) }} Monitor</span>
+      <span class="badge badge-success">{{ counts.get('Advanced', 0) }} Safe</span>
+      <span class="badge badge-accent">ML Powered</span>
+    </div>
+  </div>
+  <div class="welcome-right">
+    <div class="conf-label">Total Students</div>
+    <div class="conf-value">{{ total }}</div>
+    <div class="conf-sub">Random Forest · 200 estimators</div>
+  </div>
+</div>
+
+<!-- Metric Cards -->
+<div class="metric-grid">
+  <div class="card metric-card red">
+    <div class="metric-label">Weak / At Risk</div>
+    <div class="metric-value red">{{ counts.get('Weak', 0) }}</div>
+    <div class="metric-bar-track">
+      <div class="metric-bar-fill" style="width:{% if total > 0 %}{{ (counts.get('Weak',0)/total*100)|round(1) }}{% else %}0{% endif %}%;background:linear-gradient(90deg,var(--amber),var(--red));"></div>
+    </div>
+    <div class="metric-sub"><span class="badge badge-danger">Needs Attention</span></div>
+  </div>
+  <div class="card metric-card amber">
+    <div class="metric-label">Average / Monitor</div>
+    <div class="metric-value amber">{{ counts.get('Average', 0) }}</div>
+    <div class="metric-bar-track">
+      <div class="metric-bar-fill" style="width:{% if total > 0 %}{{ (counts.get('Average',0)/total*100)|round(1) }}{% else %}0{% endif %}%;background:var(--amber);"></div>
+    </div>
+    <div class="metric-sub"><span class="badge badge-warning">Keep Monitoring</span></div>
+  </div>
+  <div class="card metric-card green">
+    <div class="metric-label">Advanced / Safe</div>
+    <div class="metric-value green">{{ counts.get('Advanced', 0) }}</div>
+    <div class="metric-bar-track">
+      <div class="metric-bar-fill" style="width:{% if total > 0 %}{{ (counts.get('Advanced',0)/total*100)|round(1) }}{% else %}0{% endif %}%;background:var(--green);"></div>
+    </div>
+    <div class="metric-sub"><span class="badge badge-success">On Track</span></div>
+  </div>
+  <div class="card metric-card accent">
+    <div class="metric-label">Total Students</div>
+    <div class="metric-value accent">{{ total }}</div>
+    <div class="metric-bar-track">
+      <div class="metric-bar-fill" style="width:100%;background:var(--accent);"></div>
+    </div>
+    <div class="metric-sub" style="color:var(--muted);">Enrolled in system</div>
+  </div>
+</div>
+
+<!-- Chart + At-Risk -->
+<div class="two-col">
+  <div class="card">
+    <div class="section-title">
+      <div class="st-row"><span class="st-icon">📊</span><span class="st-text">Category Distribution</span></div>
+      <div class="st-sub">ML-predicted performance breakdown</div>
+    </div>
+    <div class="chart-wrap"><canvas id="distChart"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">
+      <div class="st-row"><span class="st-icon">⚠️</span><span class="st-text">At-Risk Students</span></div>
+      <div class="st-sub">Flagged as Weak — require immediate attention</div>
+    </div>
+    {% set at_risk = students | selectattr('predicted_category', 'equalto', 'Weak') | list %}
+    {% if at_risk %}
+      <div class="rec-list" style="max-height:240px;overflow-y:auto;">
+        {% for s in at_risk %}
+        {% set s_name = s.name if (s.name and not s.name.startswith('Student ')) else '' %}
+        <div class="rec-item" style="border-left:3px solid var(--red);background:#fff;">
+          <div class="student-avatar">
+            {%- if s_name -%}
+              {{ s_name.split()[0][0] | upper }}{{ s_name.split()[-1][0] | upper if s_name.split()|length > 1 else '' }}
+            {%- else -%}
+              {{ (s.id or 'ST')[:2].upper() }}
+            {%- endif -%}
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div class="rec-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ s_name or s.id or '—' }}</div>
+            <div class="rec-detail">{{ s.id }} &nbsp;·&nbsp; {{ s.branch or '—' }}</div>
+          </div>
+          <a href="/student/{{ s.id }}" class="tbl-btn tbl-btn-view" style="flex-shrink:0;">Deep Dive</a>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">✅</div>
+        No at-risk students currently.<br>All students are performing well.
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Upload + Predict -->
+<div class="two-col">
+  <div class="card">
+    <div class="section-title">
+      <div class="st-row"><span class="st-icon">📂</span><span class="st-text">Batch CSV Upload</span></div>
+      <div class="st-sub">Upload a CSV to process and categorise new student records</div>
+    </div>
+
+    <!-- Required columns reference -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Required CSV Columns</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        {% for col in ['id','name','branch','semester','year','attendance','mid_term_marks','class_test_score','quiz_avg_score','assignment_completion','assignment_delay','previous_sem_gpa','backlogs','class_participation','doubt_asking','attention_level','behaviour'] %}
+          <span style="background:#fff;border:1px solid var(--border);border-radius:5px;padding:2px 8px;font-size:11px;font-family:monospace;color:var(--accent);">{{ col }}</span>
+        {% endfor %}
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--muted);">
+      <a href="/static/upload_template.csv" download="upload_template.csv"
+        style="color:var(--accent);font-weight:600;text-decoration:none;">⬇ Download template CSV</a>
+    </div>
+    </div>
+
+    <form id="uploadForm" onsubmit="uploadCSV(event)">
+      <div class="upload-row">
+        <input type="file" id="csvFile" name="file" accept=".csv" required class="file-input" />
+        <button type="submit" class="action-btn btn-primary" id="uploadBtn">⬆ Upload &amp; Predict</button>
+      </div>
+    </form>
+
+    <!-- Upload result message -->
+    <div id="uploadMsg" style="display:none;margin-top:12px;padding:10px 14px;border-radius:8px;font-size:13px;"></div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">
+      <div class="st-row"><span class="st-icon">🤖</span><span class="st-text">Batch ML Prediction</span></div>
+      <div class="st-sub">Re-run the Random Forest model on all existing records</div>
+    </div>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:16px;line-height:1.6;">
+      Refreshes predictions for every student in the database. Use after updating student data or retraining the model.
+    </p>
+    <button class="action-btn btn-outline-accent" onclick="predictAll(this)">🔄 Refresh All Predictions</button>
+  </div>
+</div>
+
+<!-- Student Roster Table -->
+<div class="card" style="margin-bottom:8px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+    <div class="section-title" style="margin-bottom:0;">
+      <div class="st-row"><span class="st-icon">🎓</span><span class="st-text">Student Roster</span></div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <select id="categoryFilter" onchange="filterTable()" class="form-control" style="width:auto;padding:7px 12px;">
+        <option value="all">All Categories</option>
+        <option value="Weak">Weak</option>
+        <option value="Average">Average</option>
+        <option value="Advanced">Advanced</option>
+      </select>
+      <input type="text" id="searchInput" placeholder="Search name or ID…" oninput="filterTable()"
+        class="form-control" style="width:200px;" />
+    </div>
+  </div>
+
+  <div style="overflow-x:auto;">
+    <table class="tbl" id="rosterTable">
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>Branch</th>
+          <th>Category</th>
+          <th>Confidence</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for student in students %}
+        {% set display_name = student.name if (student.name and not student.name.startswith('Student ')) else '' %}
+        <tr id="row-{{ student.id }}"
+            data-name="{{ (display_name or student.id or '') | lower }}"
+            data-id="{{ (student.id or '') | lower }}"
+            data-category="{{ student.predicted_category or '' }}">
+          <td>
+            <div class="name-cell">
+              <div class="student-avatar">
+                {%- if display_name -%}
+                  {{ display_name.split()[0][0] | upper }}{{ display_name.split()[-1][0] | upper if display_name.split()|length > 1 else '' }}
+                {%- else -%}
+                  {{ (student.id or 'ST')[:2].upper() }}
+                {%- endif -%}
+              </div>
+              <div>
+                <div class="student-name">{{ display_name or student.id or '—' }}</div>
+                <div class="student-id">{{ student.id }}</div>
+              </div>
+            </div>
+          </td>
+          <td style="color:var(--sub);">{{ student.branch or '—' }}</td>
+          <td>
+            {% if student.predicted_category == 'Weak' %}
+              <span class="badge badge-danger">Weak</span>
+            {% elif student.predicted_category == 'Average' %}
+              <span class="badge badge-warning">Average</span>
+            {% elif student.predicted_category == 'Advanced' %}
+              <span class="badge badge-success">Advanced</span>
+            {% else %}
+              <span class="badge badge-secondary">Pending</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if student.confidence %}
+              <div class="conf-bar-wrap">
+                <div class="conf-bar-track">
+                  <div class="conf-bar-fill" style="width:{{ '%.1f'|format(student.confidence) }}%;"></div>
+                </div>
+                <span class="conf-pct">{{ '%.1f'|format(student.confidence) }}%</span>
+              </div>
+            {% else %}
+              <span style="color:var(--muted);font-size:12px;">N/A</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="tbl-actions">
+              <a href="/student/{{ student.id }}" class="tbl-btn tbl-btn-view">View</a>
+              <button class="tbl-btn tbl-btn-del" onclick="deleteStudent('{{ student.id }}')">Del</button>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5">
+            <div class="empty-state"><div class="empty-icon">📭</div>No students found. Upload a CSV or add a student manually.</div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div style="margin-top:10px;font-size:12px;color:var(--sub);" id="rowCount"></div>
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <span>SEPPS — Student Early Performance Prediction System &nbsp;·&nbsp; Flask + SQLite + Random Forest</span>
+  <span>© 2026 &nbsp;·&nbsp; Predictions are advisory only</span>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // ── Distribution Chart ──
+  new Chart(document.getElementById('distChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: ['Weak (At Risk)', 'Average (Monitor)', 'Advanced (Safe)'],
+      datasets: [{
+        label: 'Students',
+        data: [{{ counts.get('Weak', 0) }}, {{ counts.get('Average', 0) }}, {{ counts.get('Advanced', 0) }}],
+        backgroundColor: ['rgba(220,38,38,0.12)', 'rgba(217,119,6,0.12)', 'rgba(22,163,74,0.12)'],
+        borderColor:     ['#dc2626', '#d97706', '#16a34a'],
+        borderWidth: 2, borderRadius: 8,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#fff', borderColor: '#e2e8f0', borderWidth: 1,
+          titleColor: '#1e293b', bodyColor: '#64748b', padding: 12,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 11 } }, border: { display: false } },
+        y: { grid: { color: '#f1f5f9' }, ticks: { color: '#94a3b8', font: { size: 11 }, stepSize: 1 }, beginAtZero: true, border: { display: false } }
+      }
+    }
+  });
+
+  // ── Table filter (category dropdown + text search) ──
+  function filterTable() {
+    const cat = document.getElementById('categoryFilter').value;
+    const q   = document.getElementById('searchInput').value.toLowerCase();
+    let visible = 0;
+    document.querySelectorAll('#rosterTable tbody tr[data-name]').forEach(row => {
+      const matchCat  = cat === 'all' || row.dataset.category === cat;
+      const matchText = !q || row.dataset.name.includes(q) || row.dataset.id.includes(q);
+      row.style.display = (matchCat && matchText) ? '' : 'none';
+      if (matchCat && matchText) visible++;
+    });
+    const el = document.getElementById('rowCount');
+    if (el) el.textContent = visible + ' student' + (visible !== 1 ? 's' : '') + ' shown';
+  }
+  filterTable();
+
+  // ── Delete student ──
+  async function deleteStudent(id) {
+    if (!confirm('Are you sure you want to delete this student?')) return;
+    const res = await fetch('/api/students/' + id, { method: 'DELETE' });
+    if (res.ok) { const row = document.getElementById('row-' + id); if (row) { row.remove(); filterTable(); } }
+    else alert('Error deleting student.');
+  }
+
+  // ── CSV Upload ──
+  async function uploadCSV(e) {
+    e.preventDefault();
+    const btn = document.getElementById('uploadBtn');
+    const msg = document.getElementById('uploadMsg');
+    btn.disabled = true; btn.textContent = '⏳ Uploading…';
+    msg.style.display = 'none';
+
+    const fd = new FormData();
+    fd.append('file', document.getElementById('csvFile').files[0]);
+
+    try {
+      const res  = await fetch('/api/upload_csv', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (res.ok) {
+        msg.style.cssText = 'display:block;margin-top:12px;padding:10px 14px;border-radius:8px;font-size:13px;background:#f0fdf4;border:1px solid rgba(22,163,74,0.2);color:#16a34a;';
+        msg.textContent = '✅ ' + (data.message || 'Upload successful!') + ' — reloading…';
+        setTimeout(() => window.location.reload(), 1200);
+      } else {
+        msg.style.cssText = 'display:block;margin-top:12px;padding:10px 14px;border-radius:8px;font-size:13px;background:#fef2f2;border:1px solid rgba(220,38,38,0.2);color:#dc2626;';
+        msg.textContent = '❌ ' + (data.error || 'Upload failed. Check your CSV columns and try again.');
+        btn.disabled = false; btn.textContent = '⬆ Upload & Predict';
+      }
+    } catch (err) {
+      msg.style.cssText = 'display:block;margin-top:12px;padding:10px 14px;border-radius:8px;font-size:13px;background:#fef2f2;border:1px solid rgba(220,38,38,0.2);color:#dc2626;';
+      msg.textContent = '❌ Request failed. Is Flask running?';
+      btn.disabled = false; btn.textContent = '⬆ Upload & Predict';
+    }
+  }
+
+  // ── Batch predict ──
+  async function predictAll(btn) {
+    btn.textContent = '⏳ Predicting…'; btn.disabled = true;
+    const res = await fetch('/api/predict_all', { method: 'POST' });
+    if (res.ok) window.location.reload();
+    else { alert('Error running batch prediction.'); btn.textContent = '🔄 Refresh All Predictions'; btn.disabled = false; }
+  }
+</script>
+{% endblock %}
