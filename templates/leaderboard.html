@@ -1,0 +1,450 @@
+{% extends "layout.html" %}
+{% block page_title %}Leaderboard{% endblock %}
+{% block breadcrumb %}Leaderboard{% endblock %}
+
+{% block head_extra %}
+<style>
+  /* ── Podium cards (top 3) ──────────────────────────────────────────── */
+  .podium {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .podium-card {
+    border-radius: 14px;
+    padding: 22px 18px;
+    text-align: center;
+    position: relative;
+    border: 1px solid transparent;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .podium-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.10); }
+
+  .podium-1 {
+    background: linear-gradient(145deg, #fffbeb, #fef3c7);
+    border-color: rgba(245,158,11,0.35);
+    box-shadow: 0 4px 18px rgba(245,158,11,0.12);
+  }
+  .podium-2 {
+    background: linear-gradient(145deg, #f8fafc, #f1f5f9);
+    border-color: rgba(148,163,184,0.4);
+    box-shadow: 0 4px 18px rgba(100,116,139,0.08);
+  }
+  .podium-3 {
+    background: linear-gradient(145deg, #fff7f5, #fef2ee);
+    border-color: rgba(205,124,84,0.35);
+    box-shadow: 0 4px 18px rgba(205,124,84,0.10);
+  }
+
+  .podium-crown { font-size: 24px; margin-bottom: 6px; }
+  .podium-avatar {
+    width: 56px; height: 56px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 800; color: #fff; margin-bottom: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  }
+  .podium-1 .podium-avatar { background: linear-gradient(135deg,#f59e0b,#d97706); }
+  .podium-2 .podium-avatar { background: linear-gradient(135deg,#94a3b8,#64748b); }
+  .podium-3 .podium-avatar { background: linear-gradient(135deg,#cd7c54,#a0522d); }
+
+  .podium-name  { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .podium-branch { font-size: 11px; color: var(--muted); margin-bottom: 10px; }
+  .podium-score {
+    font-size: 32px; font-weight: 900; line-height: 1; margin-bottom: 6px;
+  }
+  .podium-1 .podium-score { color: #d97706; }
+  .podium-2 .podium-score { color: #64748b; }
+  .podium-3 .podium-score { color: #a0522d; }
+  .podium-score-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+
+  .podium-badge {
+    display: inline-block; margin-top: 10px;
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .podium-1 .podium-badge { background: rgba(245,158,11,0.15); color: #b45309; }
+  .podium-2 .podium-badge { background: rgba(100,116,139,0.12); color: #475569; }
+  .podium-3 .podium-badge { background: rgba(205,124,84,0.15); color: #92400e; }
+
+  /* ── Filter bar ────────────────────────────────────────────────────── */
+  .filter-bar {
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 16px; margin-bottom: 16px;
+  }
+  .filter-bar label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  .filter-bar select {
+    padding: 6px 10px; border: 1px solid var(--border);
+    border-radius: 7px; font-size: 12px; color: var(--text);
+    background: var(--surface); cursor: pointer; font-family: inherit;
+    outline: none; transition: border-color 0.15s;
+  }
+  .filter-bar select:focus { border-color: var(--accent); }
+  .filter-sep { width: 1px; height: 24px; background: var(--border); }
+  .filter-count {
+    margin-left: auto; font-size: 12px; color: var(--muted);
+    background: var(--surface); padding: 4px 10px; border-radius: 20px;
+    border: 1px solid var(--border);
+  }
+  .filter-count strong { color: var(--text); }
+
+  /* ── Leaderboard table tweaks ──────────────────────────────────────── */
+  .score-bar-wrap { display: flex; align-items: center; gap: 10px; min-width: 140px; }
+  .score-bar-track {
+    flex: 1; height: 7px; background: var(--surface);
+    border-radius: 4px; overflow: hidden; border: 1px solid var(--border);
+  }
+  .score-bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+  .score-val { font-size: 12px; font-weight: 700; color: var(--text); width: 36px; text-align: right; }
+
+  .cat-chip {
+    display: inline-block; padding: 2px 9px; border-radius: 20px;
+    font-size: 11px; font-weight: 600; border: 1px solid transparent;
+  }
+  .cat-weak     { background: var(--redSoft);    color: var(--red);    border-color: rgba(220,38,38,0.2); }
+  .cat-average  { background: var(--amberSoft);  color: var(--amber);  border-color: rgba(217,119,6,0.2); }
+  .cat-advanced { background: var(--greenSoft);  color: var(--green);  border-color: rgba(22,163,74,0.2); }
+  .cat-unknown  { background: var(--surface);    color: var(--muted);  border-color: var(--border); }
+
+  .status-chip {
+    display: inline-block; padding: 2px 9px; border-radius: 20px;
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+    border: 1px solid transparent;
+  }
+  .status-top       { background: var(--purpleSoft); color: var(--purple); border-color: rgba(124,58,237,0.2); }
+  .status-consistent{ background: var(--accentSoft); color: var(--accent); border-color: rgba(37,99,235,0.2); }
+  .status-needs     { background: var(--redSoft);    color: var(--red);    border-color: rgba(220,38,38,0.2); }
+
+  .top3-row td { background: #fffbeb !important; }
+  .top3-row:hover td { background: #fef3c7 !important; }
+
+  /* ── Summary metrics row ───────────────────────────────────────────── */
+  .lb-metrics {
+    display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 22px;
+  }
+  .lb-metric-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 18px; position: relative; overflow: hidden;
+  }
+  .lb-metric-card::before {
+    content:''; position: absolute; top:0; left:0; right:0; height:3px;
+  }
+  .lb-metric-card.total::before   { background: var(--accent); }
+  .lb-metric-card.top::before     { background: var(--purple); }
+  .lb-metric-card.avg::before     { background: var(--amber); }
+  .lb-metric-card.at-risk::before { background: var(--red); }
+  .lb-metric-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+  .lb-metric-val { font-size: 36px; font-weight: 900; line-height: 1; }
+  .lb-metric-card.total .lb-metric-val   { color: var(--accent); }
+  .lb-metric-card.top   .lb-metric-val   { color: var(--purple); }
+  .lb-metric-card.avg   .lb-metric-val   { color: var(--amber); }
+  .lb-metric-card.at-risk .lb-metric-val { color: var(--red); }
+  .lb-metric-sub { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+  /* ── Hidden row (filtered out) ─────────────────────────────────────── */
+  tr.lb-hidden { display: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Page header ──────────────────────────────────────────────────────── -->
+<div class="welcome-banner" style="margin-bottom:22px">
+  <div>
+    <h1>🏆 Academic Leaderboard</h1>
+    <p>Composite performance ranking across all enrolled students — updated after every prediction run.</p>
+    <div class="welcome-badges">
+      <span class="badge badge-accent">Live Rankings</span>
+      <span class="badge badge-purple">8-Factor Score</span>
+      <span class="badge badge-success">{{ total }} Students</span>
+    </div>
+  </div>
+  <div class="welcome-right" style="text-align:center">
+    <div class="conf-label">Leaderboard Score</div>
+    <div class="conf-value">{{ students[0].score if students else '—' }}</div>
+    <div class="conf-sub">Top Score / 100</div>
+  </div>
+</div>
+
+<!-- ── Summary metrics ──────────────────────────────────────────────────── -->
+<div class="lb-metrics">
+  <div class="lb-metric-card total">
+    <div class="lb-metric-lbl">Total Ranked</div>
+    <div class="lb-metric-val">{{ total }}</div>
+    <div class="lb-metric-sub">All branches &amp; semesters</div>
+  </div>
+  <div class="lb-metric-card top">
+    <div class="lb-metric-lbl">Top Performers</div>
+    <div class="lb-metric-val">{{ students | selectattr('badge','equalto','Top Performer') | list | length }}</div>
+    <div class="lb-metric-sub">Score ≥ 75 / 100</div>
+  </div>
+  <div class="lb-metric-card avg">
+    <div class="lb-metric-lbl">Consistent</div>
+    <div class="lb-metric-val">{{ students | selectattr('badge','equalto','Consistent') | list | length }}</div>
+    <div class="lb-metric-sub">Score 50 – 74</div>
+  </div>
+  <div class="lb-metric-card at-risk">
+    <div class="lb-metric-lbl">Needs Improvement</div>
+    <div class="lb-metric-val">{{ students | selectattr('badge','equalto','Needs Improvement') | list | length }}</div>
+    <div class="lb-metric-sub">Score &lt; 50</div>
+  </div>
+</div>
+
+<!-- ── Top-3 Podium ──────────────────────────────────────────────────────── -->
+{% if students|length >= 1 %}
+<div class="section-title">
+  <div class="st-row"><span class="st-icon">🥇</span><span class="st-text">Top Performers Podium</span></div>
+  <div class="st-sub">Gold · Silver · Bronze — highest composite performance scores</div>
+</div>
+
+<div class="podium">
+  {% for i in range([students|length, 3]|min) %}
+  {% set s = students[i] %}
+  <div class="podium-card podium-{{ i+1 }}">
+    <div class="podium-crown">{{ ['🥇','🥈','🥉'][i] }}</div>
+    <div class="podium-avatar">{{ s.initials }}</div>
+    <div class="podium-name">{{ s.name }}</div>
+    <div class="podium-branch">{{ s.branch }}{% if s.semester %} · Sem {{ s.semester }}{% endif %}</div>
+    <div class="podium-score">{{ s.score }}</div>
+    <div class="podium-score-lbl">Performance Score</div>
+    <div class="podium-badge">{{ s.badge }}</div>
+  </div>
+  {% endfor %}
+
+  {% if students|length == 2 %}
+  <div class="podium-card podium-3" style="opacity:0.35;pointer-events:none">
+    <div class="podium-crown">🥉</div>
+    <div class="podium-avatar" style="background:#cbd5e1">—</div>
+    <div class="podium-name">No 3rd student</div>
+    <div class="podium-score" style="color:var(--muted)">—</div>
+  </div>
+  {% elif students|length == 1 %}
+  {% for _ in range(2) %}
+  <div class="podium-card podium-{{ loop.index+1 }}" style="opacity:0.3;pointer-events:none">
+    <div class="podium-avatar" style="background:#cbd5e1">—</div>
+    <div class="podium-name">No data</div>
+  </div>
+  {% endfor %}
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- ── Filter bar ────────────────────────────────────────────────────────── -->
+<div class="filter-bar">
+  <label>Filter by</label>
+
+  <select id="filterBranch" onchange="applyFilters()">
+    <option value="">All Branches</option>
+    {% for b in branches %}
+    <option value="{{ b }}">{{ b }}</option>
+    {% endfor %}
+  </select>
+
+  <div class="filter-sep"></div>
+
+  <select id="filterSemester" onchange="applyFilters()">
+    <option value="">All Semesters</option>
+    {% for sem in semesters %}
+    <option value="{{ sem }}">Semester {{ sem }}</option>
+    {% endfor %}
+  </select>
+
+  <div class="filter-sep"></div>
+
+  <select id="filterYear" onchange="applyFilters()">
+    <option value="">All Years</option>
+    {% for y in years %}
+    <option value="{{ y }}">Year {{ y }}</option>
+    {% endfor %}
+  </select>
+
+  <div class="filter-sep"></div>
+
+  <select id="filterBadge" onchange="applyFilters()">
+    <option value="">All Statuses</option>
+    <option value="Top Performer">⭐ Top Performer</option>
+    <option value="Consistent">✅ Consistent</option>
+    <option value="Needs Improvement">⚠️ Needs Improvement</option>
+  </select>
+
+  <button class="btn btn-outline" style="font-size:12px;padding:6px 14px" onclick="resetFilters()">Reset</button>
+  <span class="filter-count"><strong id="visibleCount">{{ total }}</strong> of {{ total }} shown</span>
+</div>
+
+<!-- ── Full ranking table ─────────────────────────────────────────────────── -->
+{% if students %}
+<div class="card" style="padding:0;overflow:hidden">
+  <table class="tbl" id="lbTable">
+    <thead>
+      <tr>
+        <th style="width:52px">Rank</th>
+        <th>Student</th>
+        <th>Branch</th>
+        <th>Semester</th>
+        <th>Performance Score</th>
+        <th>Risk Category</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for s in students %}
+    <tr class="lb-row {% if s.rank <= 3 %}top3-row{% endif %}"
+        data-branch="{{ s.branch }}"
+        data-semester="{{ s.semester or '' }}"
+        data-year="{{ s.year or '' }}"
+        data-badge="{{ s.badge }}">
+      <td>
+        <span class="rank-badge rank-{{ s.rank if s.rank <= 3 else 'n' }}">{{ s.rank }}</span>
+      </td>
+      <td>
+        <div class="name-cell">
+          <div class="student-avatar">{{ s.initials }}</div>
+          <div>
+            <div class="student-name">{{ s.name }}</div>
+            <div class="student-id">{{ s.id }}</div>
+          </div>
+        </div>
+      </td>
+      <td style="font-size:12px;color:var(--muted)">{{ s.branch }}</td>
+      <td style="font-size:12px;color:var(--muted)">
+        {% if s.semester %}Sem {{ s.semester }}{% else %}—{% endif %}
+      </td>
+      <td>
+        <div class="score-bar-wrap">
+          <div class="score-bar-track">
+            <div class="score-bar-fill"
+                 style="width:{{ s.score }}%;background:{% if s.score >= 75 %}var(--green){% elif s.score >= 50 %}var(--accent){% else %}var(--red){% endif %}">
+            </div>
+          </div>
+          <span class="score-val">{{ s.score }}</span>
+        </div>
+      </td>
+      <td>
+        <span class="cat-chip cat-{{ s.category | lower }}">{{ s.category }}</span>
+      </td>
+      <td>
+        {% if s.badge == 'Top Performer' %}
+          <span class="status-chip status-top">⭐ Top Performer</span>
+        {% elif s.badge == 'Consistent' %}
+          <span class="status-chip status-consistent">✅ Consistent</span>
+        {% else %}
+          <span class="status-chip status-needs">⚠️ Needs Improvement</span>
+        {% endif %}
+      </td>
+      <td>
+        <div class="tbl-actions">
+          <a href="/dashboard/{{ s.id }}" class="tbl-btn" style="background:var(--greenSoft);color:var(--green);border:1px solid rgba(22,163,74,0.2);font-size:10px">Portal</a>
+          <a href="/student/{{ s.id }}"   class="tbl-btn tbl-btn-view" style="font-size:10px">Details</a>
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card">
+  <div class="empty-state">
+    <div class="empty-icon">🏆</div>
+    <p>No students in the database yet. Upload a CSV or add students to see the leaderboard.</p>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Scoring methodology card ──────────────────────────────────────────── -->
+<div class="card" style="margin-top:8px">
+  <div class="section-title" style="margin-bottom:14px">
+    <div class="st-row"><span class="st-icon">⚖️</span><span class="st-text">Scoring Methodology</span></div>
+    <div class="st-sub">8-factor composite formula — weights sum to 100%</div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">
+    {% set factors = [
+      ('📝','Mid-term Marks','25%','Core academic performance'),
+      ('📅','Attendance','20%','Eligibility & engagement signal'),
+      ('📋','Class Test Score','15%','Continuous assessment'),
+      ('✅','Assignment Completion','15%','Discipline & regularity'),
+      ('❓','Quiz Average Score','10%','Quick comprehension checks'),
+      ('🎓','Previous Sem GPA','10%','Cumulative academic track'),
+      ('🙋','Class Participation','3%','Engagement in sessions'),
+      ('🌟','Behaviour','2%','Conduct & discipline'),
+    ] %}
+    {% for icon, name, wt, desc in factors %}
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:16px">{{ icon }}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:700;color:var(--text)">{{ name }}</div>
+        <div style="font-size:11px;color:var(--muted)">{{ desc }}</div>
+      </div>
+      <span class="badge badge-accent" style="font-size:11px;white-space:nowrap">{{ wt }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- ── Footer ─────────────────────────────────────────────────────────────── -->
+<div class="footer">
+  <span>SEPPS · Academic Leaderboard</span>
+  <span>Flask + SQLite + Decision Tree · Rankings recalculated live</span>
+</div>
+
+<script>
+const ALL_STUDENTS = {{ students_json | safe }};
+const TOTAL = {{ total }};
+
+function applyFilters() {
+  const branch   = document.getElementById('filterBranch').value;
+  const semester = document.getElementById('filterSemester').value;
+  const year     = document.getElementById('filterYear').value;
+  const badge    = document.getElementById('filterBadge').value;
+
+  let visible = 0;
+  document.querySelectorAll('#lbTable tbody tr.lb-row').forEach(row => {
+    const rb = row.dataset.branch;
+    const rs = row.dataset.semester;
+    const ry = row.dataset.year;
+    const rbg = row.dataset.badge;
+
+    const ok = (!branch   || rb  === branch)
+            && (!semester || rs  === semester)
+            && (!year     || ry  === year)
+            && (!badge    || rbg === badge);
+
+    row.classList.toggle('lb-hidden', !ok);
+    if (ok) visible++;
+  });
+  document.getElementById('visibleCount').textContent = visible;
+}
+
+// Hook filters
+['filterBranch','filterSemester','filterYear','filterBadge'].forEach(id => {
+  document.getElementById(id).addEventListener('change', applyFilters);
+});
+
+// Sort
+let sortCol = null, sortDir = 1;
+document.querySelectorAll('.tbl th[data-sort]').forEach(th => {
+  th.style.cursor = 'pointer';
+  th.addEventListener('click', () => {
+    const col = th.dataset.sort;
+    if (sortCol === col) sortDir *= -1;
+    else { sortCol = col; sortDir = 1; }
+
+    const tbody = document.querySelector('#lbTable tbody');
+    const rows  = Array.from(tbody.querySelectorAll('tr.lb-row'));
+    rows.sort((a, b) => {
+      const av = a.dataset[col] || '';
+      const bv = b.dataset[col] || '';
+      const an = parseFloat(av), bn = parseFloat(bv);
+      if (!isNaN(an) && !isNaN(bn)) return (an - bn) * sortDir;
+      return av.localeCompare(bv) * sortDir;
+    });
+    rows.forEach(r => tbody.appendChild(r));
+  });
+});
+
+// Initial filter apply
+applyFilters();
+</script>
+{% endblock %}

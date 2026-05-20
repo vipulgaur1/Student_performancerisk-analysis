@@ -385,12 +385,34 @@
     {% endif %}
 
     <nav>
-      <div class="sidebar-nav-label">Navigation</div>
-      <a href="/"            class="nav-btn" data-path="/"><span class="nav-icon">📊</span><span class="nav-label">Dashboard</span></a>
+      {% if session.get('student_id') %}
+      {# ── Student sidebar — MY PORTAL ── #}
+      <div class="sidebar-nav-label">My Portal</div>
+      <a href="/dashboard/{{ session.student_id }}" class="nav-btn" data-path="/dashboard/{{ session.student_id }}"><span class="nav-icon">📊</span><span class="nav-label">My Dashboard</span></a>
+      <a href="/timetable"                          class="nav-btn" data-path="/timetable"><span class="nav-icon">📅</span><span class="nav-label">My Timetable</span></a>
+      <a href="/dashboard/{{ session.student_id }}#section-rank"            class="nav-btn"><span class="nav-icon">🏆</span><span class="nav-label">My Rank</span></a>
+
+      {# ── ACADEMIC GROWTH ── #}
+      <div class="sidebar-nav-label" style="margin-top:12px;">Academic Growth</div>
+      <a href="/dashboard/{{ session.student_id }}#section-goals"              class="nav-btn"><span class="nav-icon">🎯</span><span class="nav-label">Weekly Goals</span></a>
+      <a href="/dashboard/{{ session.student_id }}#section-recommendations"    class="nav-btn"><span class="nav-icon">💡</span><span class="nav-label">Recommendations</span></a>
+      <a href="/dashboard/{{ session.student_id }}#section-study-planner"      class="nav-btn"><span class="nav-icon">📚</span><span class="nav-label">Study Planner</span></a>
+      <a href="/dashboard/{{ session.student_id }}#section-subject-improvement" class="nav-btn"><span class="nav-icon">📈</span><span class="nav-label">Subject Improvement</span></a>
+
+      {# ── CAREER & PLACEMENT ── #}
+      <div class="sidebar-nav-label" style="margin-top:12px;">Career &amp; Placement</div>
+      <a href="/career/{{ session.student_id }}"    class="nav-btn" data-path="/career/{{ session.student_id }}"><span class="nav-icon">🚀</span><span class="nav-label">Career Hub</span></a>
+      <a href="/dashboard/{{ session.student_id }}#section-placement-readiness" class="nav-btn"><span class="nav-icon">🎓</span><span class="nav-label">Placement Readiness</span></a>
+      <a href="/dashboard/{{ session.student_id }}#section-aptitude"            class="nav-btn"><span class="nav-icon">🧮</span><span class="nav-label">Aptitude Tracker</span></a>
+      {% else %}
+      {# ── Admin sidebar ── #}
+      <div class="sidebar-nav-label">Admin</div>
+      <a href="/dashboard"   class="nav-btn" data-path="/dashboard"><span class="nav-icon">📊</span><span class="nav-label">Dashboard</span></a>
       <a href="/student/add" class="nav-btn" data-path="/student/add"><span class="nav-icon">➕</span><span class="nav-label">Add Student</span></a>
       <a href="/leaderboard" class="nav-btn" data-path="/leaderboard"><span class="nav-icon">🏆</span><span class="nav-label">Leaderboard</span></a>
       <a href="/timetable"   class="nav-btn" data-path="/timetable"><span class="nav-icon">📅</span><span class="nav-label">Timetable</span></a>
-      <a href="/tips"        class="nav-btn" data-path="/tips"><span class="nav-icon">💡</span><span class="nav-label">Tips</span></a>
+      <a href="/tips"        class="nav-btn" data-path="/tips"><span class="nav-icon">💡</span><span class="nav-label">Study Tips</span></a>
+      {% endif %}
     </nav>
 
     <div class="sidebar-footer">
@@ -407,7 +429,7 @@
         <span class="bc-cur">{% block breadcrumb %}Dashboard{% endblock %}</span>
       </div>
       <div class="topbar-right">
-        <span class="badge badge-accent">Admin</span>
+        <span class="badge badge-accent">{{ 'Student' if session.get('student_id') else 'Admin' }}</span>
         <span class="badge badge-purple">ML Powered</span>
       </div>
     </div>
@@ -421,22 +443,56 @@
 
 <script>
   // Sidebar toggle
-  const sidebar = document.getElementById('sidebar');
+  const sidebar   = document.getElementById('sidebar');
   const toggleBtn = document.getElementById('sidebarToggle');
   toggleBtn.addEventListener('click', () => {
     sidebar.classList.toggle('collapsed');
-    toggleBtn.textContent = sidebar.classList.contains('collapsed') ? '▶' : '◀';
+    toggleBtn.textContent = sidebar.classList.contains('collapsed') ? '▶' : '◄';
   });
 
-  // Auto-highlight active nav item
-  const path = window.location.pathname;
+  // Active nav highlight
+  const curPath = window.location.pathname;
+  const curHash = window.location.hash;
+
+  // 1. path-based links (data-path attribute)
   document.querySelectorAll('.nav-btn[data-path]').forEach(btn => {
-    if (btn.dataset.path === path || (btn.dataset.path !== '/' && path.startsWith(btn.dataset.path))) {
-      btn.classList.add('active');
-    } else if (btn.dataset.path === '/' && path === '/') {
+    const bp = btn.dataset.path;
+    if (bp === curPath || (bp !== '/' && curPath.startsWith(bp))) {
       btn.classList.add('active');
     }
   });
+
+  {% if session.get('student_id') %}
+  // 2. hash-based links — student only (Weekly Goals, My Rank, Recommendations)
+  if (curHash) {
+    document.querySelectorAll('.nav-btn:not([data-path])').forEach(btn => {
+      const href = btn.getAttribute('href') || '';
+      if (href.includes(curHash)) btn.classList.add('active');
+    });
+  }
+
+  // 3. scroll-based highlight — student only
+  const sectionIds = [
+    'section-goals','section-rank','section-recommendations','section-career',
+    'section-subject-improvement','section-study-planner',
+    'section-placement-readiness','section-aptitude'
+  ];
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const activeHash = '#' + entry.target.id;
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.nav-btn:not([data-path])').forEach(btn => {
+        if ((btn.getAttribute('href') || '').includes(activeHash)) btn.classList.add('active');
+      });
+    });
+  }, { threshold: 0.4 });
+
+  sectionIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) observer.observe(el);
+  });
+  {% endif %}
 </script>
 {% block scripts %}{% endblock %}
 </body>

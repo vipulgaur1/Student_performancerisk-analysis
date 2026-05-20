@@ -1,0 +1,42 @@
+Student Performance Model — Training Metrics
+=============================================
+Dataset rows : 2000
+Features     : ['attendance', 'mid_term_marks', 'class_test_score', 'quiz_avg_score', 'assignment_completion', 'assignment_delay', 'previous_sem_gpa', 'backlogs', 'class_participation', 'doubt_asking', 'attention_level', 'behaviour']
+
+Accuracy  : 86.25%
+Precision : 86.89%
+Recall    : 86.25%
+F1 Score  : 86.36%
+
+CV (5-fold): 85.80% +/- 0.64%
+
+Classification Report:
+              precision    recall  f1-score   support
+
+    Advanced       0.86      0.88      0.87       104
+     Average       0.80      0.88      0.84       161
+        Weak       0.96      0.84      0.89       135
+
+    accuracy                           0.86       400
+   macro avg       0.87      0.86      0.87       400
+weighted avg       0.87      0.86      0.86       400
+
+Confusion Matrix:
+Labels : ['Advanced', 'Average', 'Weak']
+[[ 91  13   0]
+ [ 15 141   5]
+ [  0  22 113]]
+
+Feature Importances:
+  previous_sem_gpa: 0.4656
+  backlogs: 0.2222
+  mid_term_marks: 0.1819
+  quiz_avg_score: 0.0374
+  class_test_score: 0.0356
+  assignment_delay: 0.0239
+  attendance: 0.0178
+  assignment_completion: 0.0155
+  class_participation: 0.0000
+  doubt_asking: 0.0000
+  attention_level: 0.0000
+  behaviour: 0.0000

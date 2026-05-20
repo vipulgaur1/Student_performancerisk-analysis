@@ -398,7 +398,7 @@ export default function Dashboard() {
             <div style={{ textAlign: "right" }}>
               <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>Model Confidence</div>
               <div style={{ fontSize: 32, fontWeight: 900, color: C.accent }}>{student.modelConf}%</div>
-              <div style={{ fontSize: 11, color: C.muted }}>Random Forest · 200 estimators</div>
+              <div style={{ fontSize: 11, color: C.muted }}>Decision Tree · max_depth=8</div>
             </div>
           </div>
 
@@ -558,7 +558,7 @@ export default function Dashboard() {
 
           {/* Footer */}
           <div style={{ marginTop: 20, padding: "14px 0", borderTop: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ color: C.muted, fontSize: 12 }}>SEPPS — Student Early Performance Prediction System · Flask + SQLite + Random Forest</span>
+            <span style={{ color: C.muted, fontSize: 12 }}>SEPPS — Student Early Performance Prediction System · Flask + SQLite + Decision Tree</span>
             <span style={{ color: C.muted, fontSize: 12 }}>© 2026 · Predictions are advisory only</span>
           </div>
 

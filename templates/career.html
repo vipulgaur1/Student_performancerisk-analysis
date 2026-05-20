@@ -1,0 +1,658 @@
+{% extends "layout.html" %}
+{% block page_title %}Career Growth Hub{% endblock %}
+
+{% block content %}
+
+{# ── Personalisation context ── #}
+{% set has_student = student is not none %}
+{% set score = perf_score if perf_score is not none else 0 %}
+{% set rec   = recommended_path if recommended_path else 'Full Stack Web Dev' %}
+
+<style>
+  /* ── Page header ── */
+  .career-hero {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-radius: 16px;
+    padding: 36px 32px;
+    margin-bottom: 28px;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+  .career-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 60% 80% at 90% 50%, rgba(37,99,235,0.25) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .career-hero-inner {
+    position: relative; z-index: 1;
+    display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
+  }
+  .hero-icon {
+    width: 64px; height: 64px; background: rgba(255,255,255,0.08);
+    border-radius: 18px; border: 1px solid rgba(255,255,255,0.15);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    font-size: 2rem;
+  }
+  .hero-text h1 { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.4px; }
+  .hero-text p  { margin-top: 6px; font-size: 0.9rem; color: rgba(255,255,255,0.65); max-width: 480px; }
+  .hero-badges  { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .hero-badge   {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 20px; padding: 4px 12px; font-size: 0.75rem; font-weight: 500;
+  }
+  .hero-badge.rec { background: rgba(37,99,235,0.35); border-color: rgba(37,99,235,0.5); }
+
+  /* ── Section title ── */
+  .section-hd {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 16px;
+  }
+  .section-hd h2 { font-size: 1.05rem; font-weight: 700; color: var(--text); }
+  .section-hd p  { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+  .section-tag {
+    font-size: 0.7rem; font-weight: 600; padding: 3px 10px;
+    border-radius: 20px; background: var(--accentSoft); color: var(--accent);
+    white-space: nowrap;
+  }
+
+  /* ── Career path cards grid ── */
+  .paths-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 18px;
+    margin-bottom: 32px;
+  }
+
+  .path-card {
+    background: var(--card);
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    padding: 24px 20px;
+    display: flex; flex-direction: column; gap: 16px;
+    transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
+    position: relative;
+    cursor: default;
+  }
+  .path-card:hover {
+    box-shadow: 0 8px 28px rgba(15,23,42,0.10);
+    transform: translateY(-2px);
+  }
+  .path-card.recommended {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(37,99,235,0.10), 0 4px 20px rgba(37,99,235,0.12);
+  }
+
+  .rec-ribbon {
+    position: absolute; top: -1px; right: 18px;
+    background: var(--accent); color: #fff;
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.5px;
+    padding: 4px 12px 6px; border-radius: 0 0 10px 10px;
+  }
+
+  .path-icon {
+    width: 48px; height: 48px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; flex-shrink: 0;
+  }
+  .path-icon.blue   { background: var(--accentSoft); }
+  .path-icon.purple { background: var(--purpleSoft); }
+  .path-icon.green  { background: var(--greenSoft); }
+  .path-icon.amber  { background: var(--amberSoft); }
+
+  .path-card h3 { font-size: 0.95rem; font-weight: 700; color: var(--text); }
+  .path-card .path-sub { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+
+  .match-bar-wrap { display: flex; flex-direction: column; gap: 4px; }
+  .match-bar-label { display: flex; justify-content: space-between; font-size: 0.75rem; }
+  .match-bar-label span:first-child { color: var(--muted); }
+  .match-bar-label span:last-child  { color: var(--text); font-weight: 600; }
+  .match-bar {
+    height: 6px; background: var(--surface); border-radius: 3px; overflow: hidden;
+  }
+  .match-bar-fill {
+    height: 100%; border-radius: 3px; transition: width 1s ease;
+  }
+  .fill-blue   { background: var(--accent); }
+  .fill-purple { background: var(--purple); }
+  .fill-green  { background: var(--green); }
+  .fill-amber  { background: var(--amber); }
+
+  /* ── Skills list ── */
+  .skills-list {
+    display: flex; flex-wrap: wrap; gap: 5px;
+  }
+  .skill-chip {
+    font-size: 0.71rem; font-weight: 500; padding: 3px 9px;
+    border-radius: 20px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--muted);
+  }
+  .skill-chip.core { background: var(--accentSoft); color: var(--accent); border-color: rgba(37,99,235,0.2); }
+  .skill-chip.green-chip { background: var(--greenSoft); color: var(--green); border-color: rgba(22,163,74,0.2); }
+  .skill-chip.purple-chip { background: var(--purpleSoft); color: var(--purple); border-color: rgba(124,58,237,0.2); }
+  .skill-chip.amber-chip { background: var(--amberSoft); color: var(--amber); border-color: rgba(217,119,6,0.2); }
+
+  /* ── Certifications section ── */
+  .certs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+    margin-bottom: 32px;
+  }
+  .cert-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px; display: flex; gap: 12px; align-items: flex-start;
+    transition: box-shadow 0.15s;
+  }
+  .cert-card:hover { box-shadow: 0 4px 14px rgba(15,23,42,0.08); }
+  .cert-icon {
+    width: 38px; height: 38px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; flex-shrink: 0;
+  }
+  .cert-card h4 { font-size: 0.82rem; font-weight: 600; color: var(--text); }
+  .cert-card .cert-provider { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+  .cert-card .cert-level {
+    display: inline-block; margin-top: 6px;
+    font-size: 0.68rem; font-weight: 600; padding: 2px 8px; border-radius: 10px;
+  }
+  .level-beginner { background: var(--greenSoft); color: var(--green); }
+  .level-intermediate { background: var(--amberSoft); color: var(--amber); }
+  .level-advanced { background: var(--purpleSoft); color: var(--purple); }
+
+  /* ── Roadmap timeline ── */
+  .roadmap {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 24px;
+    margin-bottom: 32px;
+  }
+  .roadmap-phases {
+    display: flex; gap: 0; overflow-x: auto;
+    padding-bottom: 8px;
+  }
+  .roadmap-phase {
+    flex: 1; min-width: 160px;
+    position: relative;
+  }
+  .roadmap-phase:not(:last-child)::after {
+    content: '';
+    position: absolute; top: 20px; right: 0;
+    width: 100%; height: 2px;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--border) 100%);
+    z-index: 0;
+  }
+  .phase-dot {
+    width: 40px; height: 40px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; position: relative; z-index: 1;
+    margin-bottom: 10px;
+  }
+  .phase-dot.done    { background: var(--greenSoft);  border: 2px solid var(--green); }
+  .phase-dot.active  { background: var(--accentSoft); border: 2px solid var(--accent); }
+  .phase-dot.upcoming{ background: var(--surface);    border: 2px solid var(--border); }
+  .phase-label { font-size: 0.72rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .phase-items { list-style: none; }
+  .phase-items li { font-size: 0.70rem; color: var(--muted); padding: 1px 0; }
+  .phase-items li::before { content: '· '; }
+
+  /* ── Placement tips ── */
+  .tips-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px;
+    margin-bottom: 32px;
+  }
+  .tip-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px;
+  }
+  .tip-icon { font-size: 1.5rem; margin-bottom: 8px; }
+  .tip-card h4 { font-size: 0.82rem; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .tip-card p  { font-size: 0.75rem; color: var(--muted); line-height: 1.5; }
+
+  /* ── CTA bar ── */
+  .cta-bar {
+    background: linear-gradient(135deg, var(--accentSoft), var(--purpleSoft));
+    border: 1px solid rgba(37,99,235,0.15);
+    border-radius: 14px; padding: 20px 24px;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .cta-bar-text h3 { font-size: 0.95rem; font-weight: 700; color: var(--text); }
+  .cta-bar-text p  { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+  .cta-bar-btns { display: flex; gap: 10px; margin-left: auto; flex-wrap: wrap; }
+  .btn-primary-sm {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent); color: #fff;
+    border-radius: 8px; padding: 8px 16px;
+    font-size: 0.82rem; font-weight: 600; text-decoration: none;
+    transition: background 0.15s;
+  }
+  .btn-primary-sm:hover { background: #1d4ed8; }
+  .btn-ghost-sm {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--card); color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 16px;
+    font-size: 0.82rem; font-weight: 600; text-decoration: none;
+    transition: background 0.15s;
+  }
+  .btn-ghost-sm:hover { background: var(--surface); }
+</style>
+
+{# ── Hero banner ── #}
+<div class="career-hero">
+  <div class="career-hero-inner">
+    <div class="hero-icon">🚀</div>
+    <div class="hero-text">
+      <h1>Career Growth Hub</h1>
+      <p>
+        {% if has_student %}
+          Personalised career guidance for <strong>{{ student.name }}</strong> based on your academic performance and predicted category.
+        {% else %}
+          Explore career paths, skills, certifications, and placement guidance tailored for CS / IT students.
+        {% endif %}
+      </p>
+      <div class="hero-badges">
+        {% if has_student %}
+          <span class="hero-badge">
+            🎓 {{ cat }} Category
+          </span>
+          <span class="hero-badge">
+            📊 Score: {{ score }}/100
+          </span>
+          <span class="hero-badge rec">
+            ⭐ Recommended: {{ rec }}
+          </span>
+        {% else %}
+          <span class="hero-badge">🎓 4 Career Tracks</span>
+          <span class="hero-badge">📜 12+ Certifications</span>
+          <span class="hero-badge">🏢 Placement Guidance</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Career Path Cards ── #}
+<div class="section-hd">
+  <div>
+    <h2>🗺️ Career Path Explorer</h2>
+    <p>Choose your track and build targeted skills for each domain.</p>
+  </div>
+  {% if has_student %}<span class="section-tag">⭐ AI-Recommended</span>{% endif %}
+</div>
+
+<div class="paths-grid">
+
+  {# ── Data Science ── #}
+  <div class="path-card {% if rec == 'Data Science' %}recommended{% endif %}">
+    {% if rec == 'Data Science' and has_student %}<div class="rec-ribbon">⭐ Recommended for You</div>{% endif %}
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="path-icon blue">📊</div>
+      <div>
+        <h3>Data Science</h3>
+        <p class="path-sub">Analytics, ML, and insights from data</p>
+      </div>
+    </div>
+    <div class="match-bar-wrap">
+      <div class="match-bar-label">
+        <span>Profile Match</span>
+        <span>{% if rec == 'Data Science' %}92%{% elif rec == 'AI/ML' %}78%{% elif rec == 'Full Stack Web Dev' %}55%{% else %}42%{% endif %}</span>
+      </div>
+      <div class="match-bar">
+        <div class="match-bar-fill fill-blue" style="width:{% if rec == 'Data Science' %}92%{% elif rec == 'AI/ML' %}78%{% elif rec == 'Full Stack Web Dev' %}55%{% else %}42%{% endif %}"></div>
+      </div>
+    </div>
+    <div class="skills-list">
+      <span class="skill-chip core">Python</span>
+      <span class="skill-chip core">Pandas / NumPy</span>
+      <span class="skill-chip">SQL</span>
+      <span class="skill-chip">Statistics</span>
+      <span class="skill-chip">Matplotlib</span>
+      <span class="skill-chip">Tableau / Power BI</span>
+      <span class="skill-chip">Feature Engineering</span>
+    </div>
+    <div>
+      <p style="font-size:0.75rem;color:var(--muted);">💼 Roles: Data Analyst · BI Developer · Data Engineer</p>
+      <p style="font-size:0.75rem;color:var(--muted);margin-top:3px;">💰 Avg Package: ₹6–14 LPA (fresher)</p>
+    </div>
+  </div>
+
+  {# ── AI / ML ── #}
+  <div class="path-card {% if rec == 'AI/ML' %}recommended{% endif %}">
+    {% if rec == 'AI/ML' and has_student %}<div class="rec-ribbon">⭐ Recommended for You</div>{% endif %}
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="path-icon purple">🤖</div>
+      <div>
+        <h3>Artificial Intelligence / ML</h3>
+        <p class="path-sub">Build intelligent systems and models</p>
+      </div>
+    </div>
+    <div class="match-bar-wrap">
+      <div class="match-bar-label">
+        <span>Profile Match</span>
+        <span>{% if rec == 'AI/ML' %}95%{% elif rec == 'Data Science' %}80%{% elif rec == 'Full Stack Web Dev' %}60%{% else %}45%{% endif %}</span>
+      </div>
+      <div class="match-bar">
+        <div class="match-bar-fill fill-purple" style="width:{% if rec == 'AI/ML' %}95%{% elif rec == 'Data Science' %}80%{% elif rec == 'Full Stack Web Dev' %}60%{% else %}45%{% endif %}"></div>
+      </div>
+    </div>
+    <div class="skills-list">
+      <span class="skill-chip purple-chip">Python</span>
+      <span class="skill-chip purple-chip">scikit-learn</span>
+      <span class="skill-chip purple-chip">TensorFlow / PyTorch</span>
+      <span class="skill-chip">Linear Algebra</span>
+      <span class="skill-chip">Deep Learning</span>
+      <span class="skill-chip">NLP Basics</span>
+      <span class="skill-chip">Model Deployment</span>
+    </div>
+    <div>
+      <p style="font-size:0.75rem;color:var(--muted);">💼 Roles: ML Engineer · AI Researcher · Data Scientist</p>
+      <p style="font-size:0.75rem;color:var(--muted);margin-top:3px;">💰 Avg Package: ₹8–18 LPA (fresher)</p>
+    </div>
+  </div>
+
+  {# ── Full Stack Web Dev ── #}
+  <div class="path-card {% if rec == 'Full Stack Web Dev' %}recommended{% endif %}">
+    {% if rec == 'Full Stack Web Dev' and has_student %}<div class="rec-ribbon">⭐ Recommended for You</div>{% endif %}
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="path-icon green">🌐</div>
+      <div>
+        <h3>Full Stack Web Dev</h3>
+        <p class="path-sub">End-to-end web application development</p>
+      </div>
+    </div>
+    <div class="match-bar-wrap">
+      <div class="match-bar-label">
+        <span>Profile Match</span>
+        <span>{% if rec == 'Full Stack Web Dev' %}88%{% elif rec == 'AI/ML' %}62%{% elif rec == 'Data Science' %}58%{% else %}50%{% endif %}</span>
+      </div>
+      <div class="match-bar">
+        <div class="match-bar-fill fill-green" style="width:{% if rec == 'Full Stack Web Dev' %}88%{% elif rec == 'AI/ML' %}62%{% elif rec == 'Data Science' %}58%{% else %}50%{% endif %}"></div>
+      </div>
+    </div>
+    <div class="skills-list">
+      <span class="skill-chip green-chip">HTML / CSS</span>
+      <span class="skill-chip green-chip">JavaScript</span>
+      <span class="skill-chip green-chip">React / Vue</span>
+      <span class="skill-chip">Node.js</span>
+      <span class="skill-chip">REST APIs</span>
+      <span class="skill-chip">SQL / MongoDB</span>
+      <span class="skill-chip">Docker Basics</span>
+    </div>
+    <div>
+      <p style="font-size:0.75rem;color:var(--muted);">💼 Roles: Frontend Dev · Backend Dev · Full Stack SDE</p>
+      <p style="font-size:0.75rem;color:var(--muted);margin-top:3px;">💰 Avg Package: ₹5–12 LPA (fresher)</p>
+    </div>
+  </div>
+
+  {# ── Business Analytics ── #}
+  <div class="path-card {% if rec == 'Business Analytics' %}recommended{% endif %}">
+    {% if rec == 'Business Analytics' and has_student %}<div class="rec-ribbon">⭐ Recommended for You</div>{% endif %}
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="path-icon amber">📈</div>
+      <div>
+        <h3>Business Analytics</h3>
+        <p class="path-sub">Data-driven business decision-making</p>
+      </div>
+    </div>
+    <div class="match-bar-wrap">
+      <div class="match-bar-label">
+        <span>Profile Match</span>
+        <span>{% if rec == 'Business Analytics' %}85%{% elif rec == 'Full Stack Web Dev' %}65%{% elif rec == 'Data Science' %}70%{% else %}55%{% endif %}</span>
+      </div>
+      <div class="match-bar">
+        <div class="match-bar-fill fill-amber" style="width:{% if rec == 'Business Analytics' %}85%{% elif rec == 'Full Stack Web Dev' %}65%{% elif rec == 'Data Science' %}70%{% else %}55%{% endif %}"></div>
+      </div>
+    </div>
+    <div class="skills-list">
+      <span class="skill-chip amber-chip">Excel Advanced</span>
+      <span class="skill-chip amber-chip">Power BI</span>
+      <span class="skill-chip amber-chip">SQL</span>
+      <span class="skill-chip">Python / R</span>
+      <span class="skill-chip">Statistics</span>
+      <span class="skill-chip">Presentation Skills</span>
+      <span class="skill-chip">Business Strategy</span>
+    </div>
+    <div>
+      <p style="font-size:0.75rem;color:var(--muted);">💼 Roles: Business Analyst · Product Analyst · Consultant</p>
+      <p style="font-size:0.75rem;color:var(--muted);margin-top:3px;">💰 Avg Package: ₹5–11 LPA (fresher)</p>
+    </div>
+  </div>
+
+</div>
+
+{# ── 6-Month Roadmap ── #}
+<div class="section-hd">
+  <div>
+    <h2>🗓️ 6-Month Placement Roadmap</h2>
+    <p>Milestones from now to placement season.</p>
+  </div>
+</div>
+
+<div class="roadmap">
+  <div class="roadmap-phases">
+
+    <div class="roadmap-phase">
+      <div class="phase-dot done">✅</div>
+      <div class="phase-label">Month 1–2 · Foundation</div>
+      <ul class="phase-items">
+        <li>Clear academic backlogs</li>
+        <li>Learn core DSA (Arrays, Strings)</li>
+        <li>Start Python / JS basics</li>
+        <li>Resume first draft</li>
+      </ul>
+    </div>
+
+    <div class="roadmap-phase">
+      <div class="phase-dot active">🔵</div>
+      <div class="phase-label">Month 3 · Build Skills</div>
+      <ul class="phase-items">
+        <li>LeetCode Easy (50 problems)</li>
+        <li>Start chosen track project</li>
+        <li>Enrol in 1 certification</li>
+        <li>Attend workshops</li>
+      </ul>
+    </div>
+
+    <div class="roadmap-phase">
+      <div class="phase-dot upcoming">⬜</div>
+      <div class="phase-label">Month 4 · Projects</div>
+      <ul class="phase-items">
+        <li>Complete 1 end-to-end project</li>
+        <li>LeetCode Medium (30 problems)</li>
+        <li>GitHub portfolio clean-up</li>
+        <li>Mock interviews start</li>
+      </ul>
+    </div>
+
+    <div class="roadmap-phase">
+      <div class="phase-dot upcoming">⬜</div>
+      <div class="phase-label">Month 5 · Prep</div>
+      <ul class="phase-items">
+        <li>3 mock technical interviews</li>
+        <li>System design basics</li>
+        <li>LinkedIn profile complete</li>
+        <li>Certification complete</li>
+      </ul>
+    </div>
+
+    <div class="roadmap-phase">
+      <div class="phase-dot upcoming">⬜</div>
+      <div class="phase-label">Month 6 · Placement</div>
+      <ul class="phase-items">
+        <li>Apply to 20+ companies</li>
+        <li>On-campus drive ready</li>
+        <li>Aptitude test practice</li>
+        <li>HR round preparation</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+{# ── Certifications ── #}
+<div class="section-hd">
+  <div>
+    <h2>📜 Recommended Certifications</h2>
+    <p>Industry-recognised credentials to boost your profile.</p>
+  </div>
+  <span class="section-tag">Free &amp; Paid</span>
+</div>
+
+<div class="certs-grid">
+  <div class="cert-card">
+    <div class="cert-icon" style="background:var(--accentSoft);">🐍</div>
+    <div>
+      <h4>Python for Everybody</h4>
+      <div class="cert-provider">Coursera · University of Michigan</div>
+      <span class="cert-level level-beginner">Beginner</span>
+    </div>
+  </div>
+  <div class="cert-card">
+    <div class="cert-icon" style="background:var(--purpleSoft);">🧠</div>
+    <div>
+      <h4>Machine Learning Specialization</h4>
+      <div class="cert-provider">Coursera · Andrew Ng</div>
+      <span class="cert-level level-intermediate">Intermediate</span>
+    </div>
+  </div>
+  <div class="cert-card">
+    <div class="cert-icon" style="background:var(--greenSoft);">🌐</div>
+    <div>
+      <h4>The Web Developer Bootcamp</h4>
+      <div class="cert-provider">Udemy · Colt Steele</div>
+      <span class="cert-level level-beginner">Beginner</span>
+    </div>
+  </div>
+  <div class="cert-card">
+    <div class="cert-icon" style="background:var(--amberSoft);">📊</div>
+    <div>
+      <h4>Google Data Analytics Certificate</h4>
+      <div class="cert-provider">Coursera · Google</div>
+      <span class="cert-level level-beginner">Beginner</span>
+    </div>
+  </div>
+  <div class="cert-card">
+    <div class="cert-icon" style="background:var(--purpleSoft);">🤖</div>
+    <div>
+      <h4>Deep Learning Specialization</h4>
+      <div class="cert-provider">Coursera · deeplearning.ai</div>
+      <span class="cert-level level-advanced">Advanced</span>
+    </div>
+  </div>
+  <div class="cert-card">
+    <div class="cert-icon" style="background:var(--accentSoft);">☁️</div>
+    <div>
+      <h4>AWS Cloud Practitioner</h4>
+      <div class="cert-provider">Amazon Web Services</div>
+      <span class="cert-level level-beginner">Beginner</span>
+    </div>
+  </div>
+  <div class="cert-card">
+    <div class="cert-icon" style="background:var(--greenSoft);">🗃️</div>
+    <div>
+      <h4>SQL for Data Science</h4>
+      <div class="cert-provider">Coursera · UC Davis</div>
+      <span class="cert-level level-beginner">Beginner</span>
+    </div>
+  </div>
+  <div class="cert-card">
+    <div class="cert-icon" style="background:var(--amberSoft);">📈</div>
+    <div>
+      <h4>Power BI Data Analyst Associate</h4>
+      <div class="cert-provider">Microsoft · PL-300</div>
+      <span class="cert-level level-intermediate">Intermediate</span>
+    </div>
+  </div>
+</div>
+
+{# ── Placement Prep Tips ── #}
+<div class="section-hd">
+  <div>
+    <h2>🏢 Placement Preparation Tips</h2>
+    <p>What top recruiters look for in campus hires.</p>
+  </div>
+</div>
+
+<div class="tips-grid">
+  <div class="tip-card">
+    <div class="tip-icon">💻</div>
+    <h4>DSA &amp; Coding Skills</h4>
+    <p>Solve 100–150 LeetCode problems (Easy + Medium). Focus on arrays, strings, trees, graphs, and DP.</p>
+  </div>
+  <div class="tip-card">
+    <div class="tip-icon">🗂️</div>
+    <h4>Projects Portfolio</h4>
+    <p>Build 2–3 end-to-end projects on GitHub. Recruiters value demonstrable work over grades alone.</p>
+  </div>
+  <div class="tip-card">
+    <div class="tip-icon">📝</div>
+    <h4>Resume Essentials</h4>
+    <p>One-page resume: skills, 2+ projects, certifications, internships. Use action verbs and quantify results.</p>
+  </div>
+  <div class="tip-card">
+    <div class="tip-icon">🎤</div>
+    <h4>Mock Interviews</h4>
+    <p>Practice on Pramp, Interviewing.io, or with peers. Do at least 5 mock rounds before the placement season.</p>
+  </div>
+  <div class="tip-card">
+    <div class="tip-icon">🧮</div>
+    <h4>Aptitude Tests</h4>
+    <p>Many companies screen via Quant / Verbal / Logical aptitude. Dedicate 20 minutes daily to IndiaBIX or RS Aggarwal.</p>
+  </div>
+  <div class="tip-card">
+    <div class="tip-icon">🌐</div>
+    <h4>LinkedIn Profile</h4>
+    <p>Complete LinkedIn with skills, projects, and certifications. Connect with alumni and recruiters in your target domain.</p>
+  </div>
+  <div class="tip-card">
+    <div class="tip-icon">🤝</div>
+    <h4>Soft Skills</h4>
+    <p>Communication, teamwork, and problem articulation matter as much as technical skills in HR and managerial rounds.</p>
+  </div>
+  <div class="tip-card">
+    <div class="tip-icon">🏆</div>
+    <h4>Competitive Coding</h4>
+    <p>Participate in CodeChef, Codeforces, or HackerEarth contests. A good rating is a strong differentiator on your resume.</p>
+  </div>
+</div>
+
+{# ── CTA bar ── #}
+{% if has_student %}
+<div class="cta-bar">
+  <div class="cta-bar-text">
+    <h3>Ready to track your progress?</h3>
+    <p>Head back to your dashboard to review weekly goals and performance insights.</p>
+  </div>
+  <div class="cta-bar-btns">
+    <a href="/dashboard/{{ student.id }}" class="btn-primary-sm">
+      📊 My Dashboard
+    </a>
+    <a href="/timetable" class="btn-ghost-sm">
+      📅 View Timetable
+    </a>
+  </div>
+</div>
+{% else %}
+<div class="cta-bar">
+  <div class="cta-bar-text">
+    <h3>Get personalised career recommendations</h3>
+    <p>Log in with your Student ID to see AI-powered guidance matched to your academic profile.</p>
+  </div>
+  <div class="cta-bar-btns">
+    <a href="/login" class="btn-primary-sm">
+      🎓 Student Login
+    </a>
+    <a href="/dashboard" class="btn-ghost-sm">
+      🏠 Admin Portal
+    </a>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

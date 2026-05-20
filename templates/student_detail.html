@@ -1,139 +1,357 @@
 {% extends "layout.html" %}
+{% block page_title %}Student Detail -- {{ student.name }}{% endblock %}
+{% block breadcrumb %}Student Detail{% endblock %}
+
+{% block head_extra %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  .dgrid  { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px; }
+  .fcards { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px 22px; box-shadow:0 4px 12px rgba(0,0,0,0.06); }
+  .ftitle { font-size:13px; font-weight:700; color:var(--text); margin-bottom:14px; display:flex; align-items:center; gap:7px; }
+
+  /* Readiness ring */
+  .rring  { width:80px; height:80px; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; border:5px solid; flex-shrink:0; }
+  .rring .rv { font-size:22px; font-weight:900; line-height:1; }
+  .rring .rl { font-size:9px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; margin-top:2px; }
+
+  /* Subject bars */
+  .srow  { display:flex; align-items:center; gap:10px; margin-bottom:9px; }
+  .snm   { font-size:12px; font-weight:600; color:var(--text); width:100px; flex-shrink:0; }
+  .sbt   { flex:1; background:var(--surface); border-radius:4px; height:8px; overflow:hidden; border:1px solid var(--border); }
+  .sbf   { height:100%; border-radius:4px; }
+  .ssc   { font-size:12px; font-weight:700; width:36px; text-align:right; flex-shrink:0; }
+  .stag  { font-size:10px; font-weight:600; border-radius:4px; padding:2px 7px; flex-shrink:0; }
+
+  /* Intervention */
+  .crow  { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); }
+  .crow:last-of-type { border-bottom:none; }
+  .crow input[type=checkbox] { width:17px; height:17px; cursor:pointer; accent-color:var(--accent); }
+  .crow label { font-size:13px; color:var(--text); cursor:pointer; flex:1; }
+  .savebtn { margin-top:12px; width:100%; padding:10px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; }
+  .savebtn:hover { background:var(--primary-hover); }
+  .stoast { display:none; margin-top:8px; text-align:center; font-size:12px; color:var(--green); font-weight:600; }
+
+  /* Suggestions */
+  .sugitem { display:flex; gap:10px; align-items:flex-start; padding:10px 12px; background:var(--surface); border:1px solid var(--border); border-radius:8px; margin-bottom:8px; }
+  .sugico  { font-size:18px; flex-shrink:0; margin-top:1px; }
+  .sugact  { font-size:13px; font-weight:600; color:var(--text); }
+  .sugdet  { font-size:11px; color:var(--muted); margin-top:2px; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div style="margin-bottom: 1rem;">
-    <a href="/" style="text-decoration: none; color: var(--text-muted);">&larr; Back to Dashboard</a>
+<div style="margin-bottom:14px;">
+  <a href="/dashboard" style="text-decoration:none;color:var(--muted);font-size:13px;">&larr; Back to Dashboard</a>
 </div>
 
-<div class="grid" style="align-items: start;">
-    <!-- Profile Card -->
-    <div class="card">
-        <h2 style="margin-top: 0; border-bottom: 1px solid var(--border); padding-bottom: 1rem;">Student Profile</h2>
-        <div style="margin-bottom: 1rem;">
-            <p style="color: var(--text-muted); margin: 0; font-size: 0.875rem;">ID</p>
-            <p style="margin: 0.25rem 0 1rem 0; font-weight: 500;">{{ student.id }}</p>
-            
-            <p style="color: var(--text-muted); margin: 0; font-size: 0.875rem;">Name</p>
-            <p style="margin: 0.25rem 0 1rem 0; font-weight: 500;">{{ student.name }}</p>
-            
-            <p style="color: var(--text-muted); margin: 0; font-size: 0.875rem;">Program</p>
-            <p style="margin: 0.25rem 0 1rem 0; font-weight: 500;">{{ student.branch }} - Year {{ student.year }}, Semester {{ student.semester }}</p>
-        </div>
+{# ====== ROW 1: Profile + ML Prediction ====== #}
+<div class="dgrid">
+
+  {# Profile #}
+  <div class="fcards">
+    <div class="ftitle"><span>&#127891;</span> Student Profile</div>
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
+      <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--purple));display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;flex-shrink:0;">
+        {{ (student.name or 'S')[0].upper() }}
+      </div>
+      <div>
+        <div style="font-size:16px;font-weight:800;color:var(--text);">{{ student.name or '&mdash;' }}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">{{ student.id }} &nbsp;&middot;&nbsp; {{ student.branch or '&mdash;' }}</div>
+        <div style="font-size:12px;color:var(--muted);">Year {{ student.year or '&mdash;' }} &nbsp;&middot;&nbsp; Sem {{ student.semester or '&mdash;' }}</div>
+      </div>
     </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      {% set att = student.attendance or 0 %}
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Attendance</div>
+        <div style="font-size:18px;font-weight:800;color:{{ 'var(--red)' if att < 75 else 'var(--green)' }};">{{ "%.0f"|format(att) }}%</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">GPA</div>
+        <div style="font-size:18px;font-weight:800;color:var(--accent);">{{ student.previous_sem_gpa or '&mdash;' }}</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Mid-Term</div>
+        <div style="font-size:18px;font-weight:800;color:var(--text);">{{ "%.0f"|format(student.mid_term_marks or 0) }}/100</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Backlogs</div>
+        <div style="font-size:18px;font-weight:800;color:{{ 'var(--red)' if (student.backlogs or 0) > 0 else 'var(--green)' }};">{{ student.backlogs or 0 }}</div>
+      </div>
+    </div>
+  </div>
 
-    <!-- Prediction Card — wired directly to student.* columns -->
-    <div class="card">
-        <h2 style="margin-top: 0; border-bottom: 1px solid var(--border); padding-bottom: 1rem;">ML Prediction Results</h2>
-
-        {% if student.predicted_category %}
-            <div style="margin-bottom: 1.5rem; display: flex; align-items: baseline; gap: 1rem;">
-                <p style="margin: 0; font-size: 1.125rem;">Category:</p>
-                {% if student.predicted_category == 'Weak' %}
-                    <span class="badge bg-danger" style="font-size: 1rem; padding: 0.4rem 1rem;">Weak</span>
-                {% elif student.predicted_category == 'Average' %}
-                    <span class="badge bg-warning" style="font-size: 1rem; padding: 0.4rem 1rem;">Average</span>
-                {% else %}
-                    <span class="badge bg-success" style="font-size: 1rem; padding: 0.4rem 1rem;">Advanced</span>
-                {% endif %}
-            </div>
-
-            <div style="margin-bottom: 1.5rem;">
-                <p style="color: var(--text-muted); margin: 0; font-size: 0.875rem;">Model Confidence</p>
-                <div style="background-color: var(--surface); border-radius: 9999px; height: 0.75rem; margin-top: 0.5rem; overflow: hidden; border: 1px solid var(--border);">
-                    <div style="height: 100%; width: {{ student.confidence if student.confidence else 0 }}%; background-color: var(--primary); border-radius: 9999px;"></div>
-                </div>
-                <p style="text-align: right; margin: 0.25rem 0; font-size: 0.75rem; color: var(--muted);">
-                    {{ "%.1f"|format(student.confidence) if student.confidence else 'N/A' }}%
-                </p>
-            </div>
-
-            <div style="margin-bottom: 1.5rem; padding: 1rem; background-color: var(--surface); border-radius: 0.5rem; border: 1px solid var(--border);">
-                <strong style="font-size: 0.875rem;">System Recommendation:</strong>
-                <p style="margin: 0.5rem 0 0 0; font-size: 0.875rem; color: var(--muted);">
-                    {{ student.recommended_action if student.recommended_action else 'N/A' }}
-                </p>
-            </div>
-
-            {% if student.predicted_category == 'Weak' %}
-                <a href="/remedial/{{ student.id }}" class="btn btn-danger" style="width: 100%; text-align: center; display: block;">View Remedial Plan</a>
-            {% elif student.predicted_category == 'Average' %}
-                <a href="/tips" class="btn btn-warning" style="width: 100%; text-align: center; display: block;">View Improvement Tips</a>
-            {% endif %}
-
+  {# ML Prediction #}
+  <div class="fcards">
+    <div class="ftitle"><span>&#129302;</span> ML Prediction Results</div>
+    {% if student.predicted_category %}
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <span style="font-size:12px;color:var(--muted);">Category:</span>
+        {% if student.predicted_category == 'Weak' %}
+          <span class="badge badge-danger" style="font-size:12px;padding:4px 12px;">&#9888; Weak &mdash; At Risk</span>
+        {% elif student.predicted_category == 'Average' %}
+          <span class="badge badge-warning" style="font-size:12px;padding:4px 12px;">&#128202; Average</span>
         {% else %}
-            <p style="color: var(--text-muted); font-style: italic; font-size: 0.875rem;">
-                No prediction available yet. Run batch prediction from the dashboard.
-            </p>
+          <span class="badge badge-success" style="font-size:12px;padding:4px 12px;">&#9989; Advanced</span>
         {% endif %}
-    </div>
+      </div>
+      <div style="margin-bottom:14px;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:5px;">Model Confidence</div>
+        <div style="background:var(--surface);border-radius:6px;height:10px;overflow:hidden;border:1px solid var(--border);">
+          <div style="height:100%;width:{{ student.confidence or 0 }}%;background:var(--accent);border-radius:6px;"></div>
+        </div>
+        <div style="text-align:right;font-size:11px;color:var(--muted);margin-top:3px;">{{ "%.1f"|format(student.confidence or 0) }}%</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px;">
+        <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">System Recommendation</div>
+        <div style="font-size:12px;color:var(--text);">{{ student.recommended_action or 'N/A' }}</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        {% if student.predicted_category == 'Weak' %}
+          <a href="/remedial/{{ student.id }}" class="btn btn-danger" style="flex:1;text-align:center;font-size:12px;padding:8px;">View Remedial Plan</a>
+        {% elif student.predicted_category == 'Average' %}
+          <a href="/tips" class="btn btn-warning" style="flex:1;text-align:center;font-size:12px;padding:8px;">View Improvement Tips</a>
+        {% endif %}
+        <a href="/career/{{ student.id }}" class="btn btn-outline" style="flex:1;text-align:center;font-size:12px;padding:8px;">Career Guidance</a>
+      </div>
+    {% else %}
+      <p style="color:var(--muted);font-size:13px;font-style:italic;">No prediction available yet.</p>
+    {% endif %}
+  </div>
 </div>
 
-<div class="card" style="margin-top: 1.5rem;">
-    <h2 style="margin-top: 0;">Academic Records &amp; Key Metrics</h2>
-    <div style="overflow-x: auto;">
-        <table>
-            <tbody>
-                {# Attendance — DB: attendance (float, 0-100) #}
-                <tr>
-                    <td style="font-weight: 500; width: 40%;">Attendance</td>
-                    <td style="{{ 'color: var(--danger); font-weight: bold;' if student.attendance is not none and student.attendance < 60 else '' }}">
-                        {{ "%.1f"|format(student.attendance) ~ '%' if student.attendance is not none else 'N/A' }}
-                    </td>
-                </tr>
+{# ====== ROW 2: Placement Readiness + Subject Weakness ====== #}
+<div class="dgrid">
 
-                {# Class Test Score — DB: class_test_score (float, 0-100) #}
-                <tr>
-                    <td style="font-weight: 500;">Class Test Score</td>
-                    <td style="{{ 'color: var(--danger); font-weight: bold;' if student.class_test_score is not none and student.class_test_score < 40 else '' }}">
-                        {{ "%.1f"|format(student.class_test_score) ~ ' / 100' if student.class_test_score is not none else 'N/A' }}
-                    </td>
-                </tr>
-
-                {# Assignment Score — DB: assignment_completion (float, 0-100) #}
-                <tr>
-                    <td style="font-weight: 500;">Assignment Score</td>
-                    <td>
-                        {{ "%.1f"|format(student.assignment_completion) ~ ' / 100' if student.assignment_completion is not none else 'N/A' }}
-                    </td>
-                </tr>
-
-                {# Doubts Logged — DB: doubt_asking (int) #}
-                <tr>
-                    <td style="font-weight: 500;">Doubts Logged</td>
-                    <td>
-                        {{ student.doubt_asking if student.doubt_asking is not none else 'N/A' }}
-                    </td>
-                </tr>
-
-                {# Behavior Score — DB: behaviour (int, 0=Low / 1=Medium / 2=High) #}
-                <tr>
-                    <td style="font-weight: 500;">Behavior Score</td>
-                    <td>
-                        {% if student.behaviour is not none %}
-                            {{ student.behaviour }} / 2 &nbsp;
-                            <span style="font-size: 0.8rem; color: var(--muted);">
-                                ({% if student.behaviour == 0 %}Low{% elif student.behaviour == 1 %}Medium{% else %}High{% endif %})
-                            </span>
-                        {% else %}
-                            N/A
-                        {% endif %}
-                    </td>
-                </tr>
-
-                {# Backlogs — DB: backlogs (int) #}
-                <tr>
-                    <td style="font-weight: 500;">Backlogs</td>
-                    <td style="{{ 'color: var(--danger); font-weight: bold;' if student.backlogs and student.backlogs > 0 else '' }}">
-                        {% if student.backlogs is not none %}
-                            {{ 'Yes (' ~ student.backlogs ~ ')' if student.backlogs > 0 else 'No' }}
-                        {% else %}
-                            N/A
-                        {% endif %}
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+  {# Placement Readiness Score #}
+  <div class="fcards">
+    <div class="ftitle"><span>&#127919;</span> Placement Readiness Score</div>
+    <div style="display:flex;align-items:center;gap:18px;margin-bottom:16px;">
+      <div class="rring" style="border-color:{{ readiness_color }};color:{{ readiness_color }};">
+        <div class="rv">{{ readiness }}%</div>
+        <div class="rl">{{ readiness_label }}</div>
+      </div>
+      <div style="flex:1;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:5px;">Overall Placement Readiness</div>
+        <div style="background:var(--surface);border-radius:4px;height:12px;overflow:hidden;border:1px solid var(--border);">
+          <div style="height:100%;width:{{ readiness }}%;background:{{ readiness_color }};border-radius:4px;"></div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+          <span class="badge {{ 'badge-success' if readiness_label == 'High' else ('badge-warning' if readiness_label == 'Medium' else 'badge-danger') }}">{{ readiness_label }} Readiness</span>
+          {% if readiness < 45 %}<span class="badge badge-danger">Placement Prep Needed</span>{% endif %}
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:8px;">
+          Att 30% + GPA 25% + Assignments 25% + Quiz 20%{% if (student.backlogs or 0) > 0 %} &minus; 5% per backlog{% endif %}
+        </div>
+      </div>
     </div>
+    {% set breakdown = [
+      ('Attendance',   student.attendance or 0,            75),
+      ('GPA (x10)',    (student.previous_sem_gpa or 0)*10, 60),
+      ('Assignments',  student.assignment_completion or 0, 65),
+      ('Quiz Avg',     student.quiz_avg_score or 0,        60),
+    ] %}
+    {% for lbl, val, thr in breakdown %}
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <div style="font-size:11px;color:var(--muted);width:90px;flex-shrink:0;">{{ lbl }}</div>
+      <div style="flex:1;background:var(--surface);border-radius:4px;height:6px;overflow:hidden;border:1px solid var(--border);">
+        <div style="height:100%;border-radius:4px;width:{{ [val,100]|min }}%;background:{{ 'var(--red)' if val < thr else 'var(--green)' }};"></div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:{{ 'var(--red)' if val < thr else 'var(--green)' }};width:36px;text-align:right;">{{ "%.0f"|format(val) }}%</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# Subject Weakness Analysis #}
+  <div class="fcards">
+    <div class="ftitle"><span>&#128218;</span> Subject Weakness Analysis</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">Scores derived from academic metrics &mdash; lower scores need most attention.</div>
+    {% for sub in subjects_analysis %}
+    <div class="srow">
+      <div class="snm">{{ sub.name }}</div>
+      <div class="sbt"><div class="sbf" style="width:{{ sub.score }}%;background:{{ sub.color }};"></div></div>
+      <div class="ssc" style="color:{{ sub.color }};">{{ sub.score }}</div>
+      <span class="stag" style="
+        background:{{ 'var(--redSoft)' if sub.status == 'critical' else ('var(--amberSoft)' if sub.status == 'weak' else 'var(--greenSoft)') }};
+        color:{{ 'var(--red)' if sub.status == 'critical' else ('var(--amber)' if sub.status == 'weak' else 'var(--green)') }};">
+        {{ 'Critical' if sub.status == 'critical' else ('Weak' if sub.status == 'weak' else 'OK') }}
+      </span>
+    </div>
+    {% endfor %}
+    <div style="margin-top:12px;padding:10px;background:var(--surface);border-radius:8px;border:1px solid var(--border);">
+      <div style="font-size:11px;font-weight:600;color:var(--muted);">Most Struggling Subject</div>
+      <div style="font-size:14px;font-weight:800;color:var(--red);margin-top:3px;">{{ subjects_analysis[0].name }} &mdash; {{ subjects_analysis[0].score }}/100</div>
+    </div>
+  </div>
+</div>
+
+{# ====== ROW 3: Intervention Tracker + Student History ====== #}
+<div class="dgrid">
+
+  {# Intervention Tracker #}
+  <div class="fcards">
+    <div class="ftitle"><span>&#128203;</span> Intervention Tracker</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">Mark completed interventions. Status is saved to the database.</div>
+
+    <div class="crow">
+      <span style="font-size:16px;">&#129489;&#8205;&#127979;</span>
+      <input type="checkbox" id="chk_mentoring" {{ 'checked' if intervention and intervention['mentoring_done'] }}>
+      <label for="chk_mentoring">Mentoring Done</label>
+    </div>
+    <div class="crow">
+      <span style="font-size:16px;">&#127979;</span>
+      <input type="checkbox" id="chk_remedial" {{ 'checked' if intervention and intervention['remedial_assigned'] }}>
+      <label for="chk_remedial">Remedial Class Assigned</label>
+    </div>
+    <div class="crow">
+      <span style="font-size:16px;">&#128222;</span>
+      <input type="checkbox" id="chk_parent" {{ 'checked' if intervention and intervention['parent_contacted'] }}>
+      <label for="chk_parent">Parent Contacted</label>
+    </div>
+    <div class="crow">
+      <span style="font-size:16px;">&#128172;</span>
+      <input type="checkbox" id="chk_counselling" {{ 'checked' if intervention and intervention['counselling_suggested'] }}>
+      <label for="chk_counselling">Counselling Suggested</label>
+    </div>
+
+    <div style="margin-top:12px;">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Notes (optional)</div>
+      <textarea id="intervention_notes" rows="3"
+        style="width:100%;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface);resize:vertical;outline:none;"
+        placeholder="Add teacher notes here...">{{ intervention['notes'] if intervention and intervention['notes'] else '' }}</textarea>
+    </div>
+    <button class="savebtn" onclick="saveIntervention('{{ student.id }}')">Save Intervention Status</button>
+    <div class="stoast" id="saveToast">Saved successfully!</div>
+    {% if intervention and intervention['updated_at'] %}
+      <div style="font-size:11px;color:var(--sub);margin-top:8px;text-align:center;">Last updated: {{ intervention['updated_at'] }}</div>
+    {% endif %}
+  </div>
+
+  {# Student History Panel #}
+  <div class="fcards">
+    <div class="ftitle"><span>&#128200;</span> Student History Panel</div>
+
+    <div style="margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Category Progression</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span class="badge {{ 'badge-danger' if history.prev_category == 'Weak' else ('badge-warning' if history.prev_category == 'Average' else 'badge-success') }}">{{ history.prev_category }}</span>
+        <span style="color:var(--muted);">&rarr;</span>
+        <span class="badge {{ 'badge-danger' if history.current_category == 'Weak' else ('badge-warning' if history.current_category == 'Average' else 'badge-success') }}">{{ history.current_category }}</span>
+        {% if history.improved %}
+          <span class="badge badge-success">Improved</span>
+        {% elif history.prev_category == history.current_category %}
+          <span class="badge badge-secondary">Stable</span>
+        {% else %}
+          <span class="badge badge-danger">Declined</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div style="margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">GPA Trend</div>
+      <div style="display:flex;gap:6px;">
+        {% for i in range(history.semesters|length) %}
+        <div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center;">
+          <div style="font-size:14px;font-weight:800;color:var(--accent);">{{ history.gpa_trend[i] }}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px;">{{ history.semesters[i] }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div style="margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Attendance Trend</div>
+      <div style="display:flex;gap:6px;">
+        {% for i in range(history.semesters|length) %}
+        {% set av = history.att_trend[i] %}
+        <div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center;">
+          <div style="font-size:14px;font-weight:800;color:{{ 'var(--red)' if av < 75 else 'var(--green)' }};">{{ av }}%</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px;">{{ history.semesters[i] }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div style="padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:{{ 'var(--greenSoft)' if history.improved else 'var(--surface)' }};">
+      <div style="font-size:12px;font-weight:600;color:{{ 'var(--green)' if history.improved else 'var(--muted)' }};">
+        {% if history.improved %}Student has shown improvement from previous semester.
+        {% else %}Performance is stable &mdash; continue monitoring.{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ====== Smart Remedial Suggestions (full width) ====== #}
+<div class="fcards" style="margin-bottom:20px;">
+  <div class="ftitle"><span>&#128161;</span> Smart Remedial Suggestions</div>
+  <div style="font-size:11px;color:var(--muted);margin-bottom:14px;">Auto-generated from current academic metrics and ML category.</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+    {% for sg in remedial_suggestions %}
+    <div class="sugitem">
+      <div class="sugico">{{ sg.icon }}</div>
+      <div>
+        <div class="sugact">{{ sg.action }}</div>
+        <div class="sugdet">{{ sg.detail }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{# ====== Full Academic Records ====== #}
+<div class="fcards" style="margin-bottom:20px;">
+  <div class="ftitle"><span>&#128209;</span> Full Academic Records</div>
+  <div style="overflow-x:auto;">
+    <table class="tbl">
+      <tbody>
+        <tr><td style="font-weight:500;width:40%;">Attendance</td>
+            <td style="{{ 'color:var(--red);font-weight:bold;' if (student.attendance or 0) < 75 else '' }}">{{ "%.1f"|format(student.attendance or 0) }}%</td></tr>
+        <tr><td style="font-weight:500;">Mid-Term Marks</td>
+            <td>{{ "%.1f"|format(student.mid_term_marks or 0) }} / 100</td></tr>
+        <tr><td style="font-weight:500;">Class Test Score</td>
+            <td style="{{ 'color:var(--red);font-weight:bold;' if (student.class_test_score or 0) < 40 else '' }}">{{ "%.1f"|format(student.class_test_score or 0) }} / 100</td></tr>
+        <tr><td style="font-weight:500;">Quiz Avg Score</td>
+            <td>{{ "%.1f"|format(student.quiz_avg_score or 0) }} / 100</td></tr>
+        <tr><td style="font-weight:500;">Assignment Completion</td>
+            <td>{{ "%.1f"|format(student.assignment_completion or 0) }}%</td></tr>
+        <tr><td style="font-weight:500;">Assignment Delay</td>
+            <td>{{ student.assignment_delay or 0 }} days</td></tr>
+        <tr><td style="font-weight:500;">Previous Sem GPA</td>
+            <td>{{ student.previous_sem_gpa or '&mdash;' }} / 10</td></tr>
+        <tr><td style="font-weight:500;">Backlogs</td>
+            <td style="{{ 'color:var(--red);font-weight:bold;' if (student.backlogs or 0) > 0 else '' }}">{{ student.backlogs or 0 }}</td></tr>
+        <tr><td style="font-weight:500;">Class Participation</td>
+            <td>{{ ['Low','Medium','High'][student.class_participation or 0] }}</td></tr>
+        <tr><td style="font-weight:500;">Behaviour</td>
+            <td>{{ ['Low','Medium','High'][student.behaviour or 0] }}</td></tr>
+      </tbody>
+    </table>
+  </div>
 </div>
 {% endblock %}
 
+{% block scripts %}
+<script>
+function saveIntervention(studentId) {
+  var payload = {
+    mentoring_done:        document.getElementById('chk_mentoring').checked,
+    remedial_assigned:     document.getElementById('chk_remedial').checked,
+    parent_contacted:      document.getElementById('chk_parent').checked,
+    counselling_suggested: document.getElementById('chk_counselling').checked,
+    notes:                 document.getElementById('intervention_notes').value,
+  };
+  fetch('/api/interventions/' + studentId, {
+    method:  'POST',
+    headers: {'Content-Type': 'application/json'},
+    body:    JSON.stringify(payload),
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(){
+    var t = document.getElementById('saveToast');
+    t.style.display = 'block';
+    setTimeout(function(){ t.style.display = 'none'; }, 3000);
+  })
+  .catch(function(){ alert('Save failed.'); });
+}
+</script>
+{% endblock %}

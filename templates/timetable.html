@@ -1,0 +1,396 @@
+{% extends "layout.html" %}
+{% block page_title %}Academic Timetable{% endblock %}
+{% block breadcrumb %}Timetable{% endblock %}
+
+{% block head_extra %}
+<style>
+  /* ── Distribution summary cards ─────────────────────────────────── */
+  .dist-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:22px; }
+  .dist-card {
+    border-radius:12px; padding:18px 20px;
+    border:1px solid transparent; position:relative; overflow:hidden;
+  }
+  .dist-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
+  .dist-weak     { background:var(--redSoft);   border-color:rgba(220,38,38,0.2); }
+  .dist-weak::before   { background:var(--red); }
+  .dist-average  { background:var(--amberSoft); border-color:rgba(217,119,6,0.2); }
+  .dist-average::before  { background:var(--amber); }
+  .dist-advanced { background:var(--greenSoft); border-color:rgba(22,163,74,0.2); }
+  .dist-advanced::before { background:var(--green); }
+  .dist-icon  { font-size:22px; margin-bottom:6px; }
+  .dist-count { font-size:38px; font-weight:900; line-height:1; margin-bottom:4px; }
+  .dist-weak    .dist-count { color:var(--red); }
+  .dist-average .dist-count { color:var(--amber); }
+  .dist-advanced .dist-count { color:var(--green); }
+  .dist-label { font-size:13px; font-weight:700; color:var(--text); margin-bottom:2px; }
+  .dist-sub   { font-size:11px; color:var(--muted); }
+  .dist-bar-track { background:rgba(0,0,0,0.08); border-radius:4px; height:5px; overflow:hidden; margin-top:10px; }
+  .dist-bar-fill  { height:100%; border-radius:4px; }
+  .dist-weak    .dist-bar-fill { background:var(--red); }
+  .dist-average .dist-bar-fill { background:var(--amber); }
+  .dist-advanced .dist-bar-fill { background:var(--green); }
+
+  /* ── Day tabs ────────────────────────────────────────────────────── */
+  .day-tabs { display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap; }
+  .day-tab {
+    padding:7px 18px; border-radius:8px; border:1px solid var(--border);
+    background:var(--card); color:var(--muted); font-size:12px; font-weight:600;
+    cursor:pointer; transition:all 0.15s; font-family:inherit;
+  }
+  .day-tab:hover { background:var(--surface); color:var(--text); }
+  .day-tab.active {
+    background:var(--accent); color:#fff; border-color:var(--accent);
+    box-shadow:0 2px 8px rgba(37,99,235,0.25);
+  }
+  .day-panel { display:none; }
+  .day-panel.visible { display:block; }
+
+  /* ── Section dividers ────────────────────────────────────────────── */
+  .tt-section-hdr {
+    display:flex; align-items:center; gap:8px;
+    padding:8px 14px;
+    font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;
+  }
+  .tt-section-hdr.morning {
+    background:#eff6ff; color:#2563eb;
+    border:1px solid rgba(37,99,235,0.15); border-bottom:none;
+    border-radius:8px 8px 0 0;
+  }
+  .tt-section-hdr.afternoon {
+    background:#f5f3ff; color:#7c3aed;
+    border:1px solid rgba(124,58,237,0.15); border-bottom:none;
+    border-radius:8px 8px 0 0;
+    margin-top:20px;
+  }
+
+  /* ── Morning single-track grid ───────────────────────────────────── */
+  .morning-grid {
+    display:flex; flex-direction:column; gap:0;
+    border:1px solid var(--border); border-radius:0 8px 8px 8px; overflow:hidden;
+  }
+  .morning-slot {
+    display:grid; grid-template-columns:132px 1fr 170px;
+    border-bottom:1px solid var(--border); background:var(--card); transition:background 0.12s;
+  }
+  .morning-slot:last-child { border-bottom:none; }
+  .morning-slot:hover { background:#f8fafc; }
+  .morning-slot.is-break { background:var(--surface); }
+
+  .ms-time {
+    padding:12px 14px; background:var(--surface); border-right:1px solid var(--border);
+    font-size:12px; font-weight:700; color:var(--text); display:flex; align-items:center;
+    white-space:nowrap;
+  }
+  .ms-session {
+    padding:12px 16px; border-right:1px solid var(--border);
+    display:flex; align-items:center; gap:10px;
+  }
+  .ms-pill {
+    padding:2px 9px; border-radius:20px; font-size:10px; font-weight:700;
+    text-transform:uppercase; letter-spacing:0.04em; flex-shrink:0;
+    background:var(--accentSoft); color:var(--accent); border:1px solid rgba(37,99,235,0.15);
+  }
+  .ms-pill.brk { background:var(--surface); color:var(--sub); border-color:var(--border); }
+  .ms-name { font-size:13px; font-weight:600; color:var(--text); }
+  .ms-faculty { padding:12px 14px; display:flex; flex-direction:column; justify-content:center; }
+  .ms-fl { font-size:9px; color:var(--sub); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:2px; }
+  .ms-fn { font-size:12px; font-weight:600; color:var(--muted); }
+
+  /* ── Lunch break row ─────────────────────────────────────────────── */
+  .lunch-block {
+    margin-top:20px;
+    border:1px solid var(--border); border-radius:8px;
+    background:var(--surface); display:flex; align-items:center;
+    padding:11px 16px; gap:12px; color:var(--muted); font-size:12px; font-weight:600;
+  }
+  .lunch-time { font-variant-numeric:tabular-nums; color:var(--text); font-weight:700; white-space:nowrap; }
+  .lunch-badge {
+    padding:2px 9px; border-radius:20px; font-size:10px; font-weight:700;
+    background:var(--card); color:var(--sub); border:1px solid var(--border);
+  }
+
+  /* ── Afternoon parallel-track table ─────────────────────────────── */
+  .pm-table-wrap {
+    border:1px solid var(--border); border-radius:0 8px 8px 8px; overflow:hidden;
+  }
+  .pm-col-hdr {
+    display:grid; grid-template-columns:120px 1fr 1fr 1fr;
+    background:var(--surface); border-bottom:2px solid var(--border);
+  }
+  .pm-col-hdr > div {
+    padding:9px 13px; font-size:10px; font-weight:700;
+    text-transform:uppercase; letter-spacing:0.07em;
+    border-right:1px solid var(--border);
+  }
+  .pm-col-hdr > div:last-child { border-right:none; }
+  .pm-col-hdr .time-hdr  { color:var(--sub); }
+  .pm-col-hdr .weak-hdr  { color:var(--red); }
+  .pm-col-hdr .avg-hdr   { color:var(--amber); }
+  .pm-col-hdr .adv-hdr   { color:var(--green); }
+
+  .pm-row {
+    display:grid; grid-template-columns:120px 1fr 1fr 1fr;
+    border-bottom:1px solid var(--border); background:var(--card); transition:background 0.12s;
+  }
+  .pm-row:last-child { border-bottom:none; }
+  .pm-row:hover { background:#f8fafc; }
+
+  .pm-time-cell {
+    padding:14px 13px; background:var(--surface); border-right:1px solid var(--border);
+    font-size:11px; font-weight:700; color:var(--text); display:flex; align-items:center;
+    font-variant-numeric:tabular-nums; white-space:nowrap;
+  }
+  .pm-data-cell {
+    padding:12px 13px; border-right:1px solid var(--border);
+    display:flex; flex-direction:column; justify-content:center; gap:2px;
+  }
+  .pm-data-cell:last-child { border-right:none; }
+  .pm-data-cell.faded { opacity:0.38; }
+
+  .pd-sess { font-size:12px; font-weight:600; color:var(--text); line-height:1.4; }
+  .pd-fac  { font-size:10px; color:var(--muted); margin-top:2px; }
+  .pd-chip {
+    display:inline-block; padding:1px 7px; border-radius:10px; margin-top:4px; width:fit-content;
+    font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;
+  }
+  .chip-weak     { background:var(--redSoft);   color:var(--red);   border:1px solid rgba(220,38,38,0.18); }
+  .chip-average  { background:var(--amberSoft); color:var(--amber); border:1px solid rgba(217,119,6,0.18); }
+  .chip-advanced { background:var(--greenSoft); color:var(--green); border:1px solid rgba(22,163,74,0.18); }
+
+  /* ── Legend ──────────────────────────────────────────────────────── */
+  .legend {
+    display:flex; gap:14px; flex-wrap:wrap;
+    background:var(--card); border:1px solid var(--border);
+    border-radius:10px; padding:11px 16px; margin-bottom:16px; align-items:center;
+  }
+  .legend-item { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--muted); }
+  .legend-dot  { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+
+  @media (max-width:960px) {
+    .pm-col-hdr, .pm-row { grid-template-columns:100px 1fr; }
+    .pm-col-hdr > div:nth-child(3), .pm-col-hdr > div:nth-child(4),
+    .pm-data-cell:nth-child(3), .pm-data-cell:nth-child(4) { display:none; }
+    .morning-slot { grid-template-columns:110px 1fr; }
+    .ms-faculty { display:none; }
+    .dist-grid { grid-template-columns:1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Page header ─────────────────────────────────────────────────────── -->
+<div class="welcome-banner" style="margin-bottom:22px">
+  <div>
+    <h1>📅 Academic &amp; Intervention Timetable</h1>
+    <p>Institutional weekly schedule — morning regular sessions for all students, parallel afternoon intervention tracks aligned to risk categories.</p>
+    <div class="welcome-badges">
+      <span class="badge badge-accent">University Format</span>
+      <span class="badge badge-purple">Parallel Tracks</span>
+      <span class="badge badge-warning">Risk-Aligned</span>
+      <span class="badge badge-success">5-Day Schedule</span>
+    </div>
+  </div>
+  <div class="welcome-right" style="text-align:center">
+    <div class="conf-label">Generated</div>
+    <div style="font-size:13px;font-weight:700;color:var(--text);margin-top:4px">{{ generated_at }}</div>
+    <div class="conf-sub" style="margin-top:4px">Live distribution</div>
+  </div>
+</div>
+
+<!-- ── Student distribution ──────────────────────────────────────────────── -->
+{% set total_stu = counts.Weak + counts.Average + counts.Advanced %}
+<div class="section-title">
+  <div class="st-row"><span class="st-icon">📊</span><span class="st-text">Current Student Distribution</span></div>
+  <div class="st-sub">Afternoon intervention tracks are weighted by the live count of students in each category</div>
+</div>
+<div class="dist-grid">
+  <div class="dist-card dist-weak">
+    <div class="dist-icon">⚠️</div>
+    <div class="dist-count">{{ counts.Weak }}</div>
+    <div class="dist-label">At-Risk Students</div>
+    <div class="dist-sub">Remedial intervention track</div>
+    <div class="dist-bar-track">
+      <div class="dist-bar-fill" style="width:{% if total_stu > 0 %}{{ (counts.Weak/total_stu*100)|round(1) }}{% else %}0{% endif %}%"></div>
+    </div>
+  </div>
+  <div class="dist-card dist-average">
+    <div class="dist-icon">📈</div>
+    <div class="dist-count">{{ counts.Average }}</div>
+    <div class="dist-label">Average Students</div>
+    <div class="dist-sub">Improvement workshops track</div>
+    <div class="dist-bar-track">
+      <div class="dist-bar-fill" style="width:{% if total_stu > 0 %}{{ (counts.Average/total_stu*100)|round(1) }}{% else %}0{% endif %}%"></div>
+    </div>
+  </div>
+  <div class="dist-card dist-advanced">
+    <div class="dist-icon">🌟</div>
+    <div class="dist-count">{{ counts.Advanced }}</div>
+    <div class="dist-label">Advanced Students</div>
+    <div class="dist-sub">Enrichment &amp; research track</div>
+    <div class="dist-bar-track">
+      <div class="dist-bar-fill" style="width:{% if total_stu > 0 %}{{ (counts.Advanced/total_stu*100)|round(1) }}{% else %}0{% endif %}%"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Legend ─────────────────────────────────────────────────────────── -->
+<div class="legend">
+  <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em">Legend:</span>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>Regular Academic — All Students</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Remedial — Weak / At-Risk</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div>Improvement — Average</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Enrichment — Advanced</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--sub)"></div>Break / Lunch</div>
+  <div style="margin-left:auto;font-size:11px;color:var(--sub);font-style:italic">Faded cells = 0 students in that category</div>
+</div>
+
+<!-- ── Day tabs ──────────────────────────────────────────────────────── -->
+<div class="section-title">
+  <div class="st-row"><span class="st-icon">🗓️</span><span class="st-text">Weekly Schedule</span></div>
+  <div class="st-sub">☀️ Morning: regular academic sessions (all students) &nbsp;·&nbsp; 🌆 Afternoon: three parallel intervention tracks by category</div>
+</div>
+
+<div class="day-tabs" id="dayTabs">
+  {% for day_data in timetable %}
+  <button class="day-tab{% if loop.first %} active{% endif %}"
+          onclick="showDay('day-{{ loop.index0 }}', this)">
+    {{ day_data.day }}
+  </button>
+  {% endfor %}
+</div>
+
+<!-- ── Day panels ─────────────────────────────────────────────────────── -->
+{% for day_data in timetable %}
+<div class="day-panel{% if loop.first %} visible{% endif %}" id="day-{{ loop.index0 }}">
+
+  <!-- Morning section header -->
+  <div class="tt-section-hdr morning">☀️ Morning &nbsp;·&nbsp; Regular Academic Sessions &nbsp;(09:00 – 01:15)</div>
+  <div class="morning-grid">
+    {% for slot in day_data.morning %}
+    <div class="morning-slot{% if slot.is_break %} is-break{% endif %}">
+      <div class="ms-time">{{ slot.time }}</div>
+      <div class="ms-session">
+        <span class="ms-pill{% if slot.is_break %} brk{% endif %}">
+          {% if slot.is_break %}☕ Break{% else %}🔵 Regular{% endif %}
+        </span>
+        <span class="ms-name">{{ slot.session }}</span>
+      </div>
+      <div class="ms-faculty">
+        <div class="ms-fl">Faculty / Coordinator</div>
+        <div class="ms-fn">{{ slot.faculty }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Lunch break -->
+  <div class="lunch-block">
+    <span class="lunch-time">01:15 – 02:00</span>
+    🍽️ <strong>Lunch Break</strong>
+    <span class="lunch-badge">All Students</span>
+  </div>
+
+  <!-- Afternoon section header -->
+  <div class="tt-section-hdr afternoon">🌆 Afternoon &nbsp;·&nbsp; Category-Specific Intervention Tracks &nbsp;(02:00 – 05:00)</div>
+  <div class="pm-table-wrap">
+    <!-- Column headers -->
+    <div class="pm-col-hdr">
+      <div class="time-hdr">Time Slot</div>
+      <div class="weak-hdr">⚠️ Weak / At-Risk &nbsp;({{ counts.Weak }} students)</div>
+      <div class="avg-hdr">📈 Average &nbsp;({{ counts.Average }} students)</div>
+      <div class="adv-hdr">🌟 Advanced &nbsp;({{ counts.Advanced }} students)</div>
+    </div>
+    <!-- Afternoon parallel rows -->
+    {% for slot in day_data.afternoon %}
+    <div class="pm-row">
+      <div class="pm-time-cell">{{ slot.time }}</div>
+      <div class="pm-data-cell{% if not slot.weak.active %} faded{% endif %}">
+        <div class="pd-sess">{{ slot.weak.session }}</div>
+        <div class="pd-fac">{{ slot.weak.faculty }}</div>
+        <span class="pd-chip chip-weak">{{ slot.weak.count }} students</span>
+      </div>
+      <div class="pm-data-cell{% if not slot.average.active %} faded{% endif %}">
+        <div class="pd-sess">{{ slot.average.session }}</div>
+        <div class="pd-fac">{{ slot.average.faculty }}</div>
+        <span class="pd-chip chip-average">{{ slot.average.count }} students</span>
+      </div>
+      <div class="pm-data-cell{% if not slot.advanced.active %} faded{% endif %}">
+        <div class="pd-sess">{{ slot.advanced.session }}</div>
+        <div class="pd-fac">{{ slot.advanced.faculty }}</div>
+        <span class="pd-chip chip-advanced">{{ slot.advanced.count }} students</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+</div><!-- end day-panel -->
+{% endfor %}
+
+<!-- ── Branch breakdown ─────────────────────────────────────────────────── -->
+{% if branch_map %}
+<div class="section-title" style="margin-top:28px">
+  <div class="st-row"><span class="st-icon">🏫</span><span class="st-text">Branch-wise Risk Distribution</span></div>
+  <div class="st-sub">Use this to plan branch-specific intervention sessions and faculty allocation</div>
+</div>
+<div class="card" style="padding:0;overflow:hidden">
+  <table class="tbl branch-tbl">
+    <thead>
+      <tr>
+        <th>Branch</th>
+        <th style="color:var(--red)">⚠️ Weak</th>
+        <th style="color:var(--amber)">📈 Average</th>
+        <th style="color:var(--green)">🌟 Advanced</th>
+        <th>Total</th>
+
+      </tr>
+    </thead>
+    <tbody>
+      {% for branch, bdata in branch_map.items() %}
+      <tr>
+        <td style="font-weight:600;color:var(--text);">{{ branch }}</td>
+        <td>
+          {% if bdata.Weak > 0 %}
+          <span class="badge badge-danger">{{ bdata.Weak }}</span>
+          {% else %}<span style="color:var(--sub)">0</span>{% endif %}
+        </td>
+        <td>
+          {% if bdata.Average > 0 %}
+          <span class="badge badge-warning">{{ bdata.Average }}</span>
+          {% else %}<span style="color:var(--sub)">0</span>{% endif %}
+        </td>
+        <td>
+          {% if bdata.Advanced > 0 %}
+          <span class="badge badge-success">{{ bdata.Advanced }}</span>
+          {% else %}<span style="color:var(--sub)">0</span>{% endif %}
+        </td>
+        <td style="font-weight:700;color:var(--accent);">{{ bdata.Weak + bdata.Average + bdata.Advanced }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Highlight active day tab
+  const today = new Date().toLocaleDateString('en-US', {weekday:'long'});
+  document.querySelectorAll('.day-tab').forEach(tab => {
+    if (tab.dataset.day === today) tab.classList.add('active');
+  });
+
+  // Day tab switching
+  document.querySelectorAll('.day-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.day-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.day-panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      const panel = document.getElementById('day-' + tab.dataset.day.toLowerCase());
+      if (panel) panel.classList.add('active');
+    });
+  });
+</script>
+{% endblock %}

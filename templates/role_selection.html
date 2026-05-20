@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>SEPPS Portal Selection</title>
+
+    <style>
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+            font-family:Arial, sans-serif;
+        }
+
+        body{
+            height:100vh;
+            background:linear-gradient(135deg,#0f172a,#1e293b);
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            color:white;
+        }
+
+        .container{
+            width:90%;
+            max-width:1000px;
+            display:flex;
+            gap:30px;
+            justify-content:center;
+            align-items:center;
+        }
+
+        .card{
+            flex:1;
+            background:#111827;
+            border:1px solid rgba(255,255,255,0.08);
+            border-radius:20px;
+            padding:40px 30px;
+            transition:0.3s ease;
+            cursor:pointer;
+            box-shadow:0 10px 30px rgba(0,0,0,0.3);
+            min-height:420px;
+            display:flex;
+            flex-direction:column;
+            justify-content:space-between;
+        }
+
+        .card:hover{
+            transform:translateY(-8px);
+            border-color:#3b82f6;
+        }
+
+        .top{
+            text-align:center;
+        }
+
+        .icon{
+            width:90px;
+            height:90px;
+            margin:0 auto 20px;
+            border-radius:50%;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            font-size:40px;
+            background:#1e40af;
+        }
+
+        .student .icon{
+            background:#059669;
+        }
+
+        h2{
+            font-size:28px;
+            margin-bottom:12px;
+        }
+
+        p{
+            color:#cbd5e1;
+            line-height:1.6;
+            font-size:15px;
+        }
+
+        ul{
+            margin-top:20px;
+            padding-left:20px;
+            color:#d1d5db;
+            line-height:1.8;
+            font-size:14px;
+        }
+
+        button{
+            margin-top:30px;
+            width:100%;
+            padding:14px;
+            border:none;
+            border-radius:12px;
+            font-size:16px;
+            font-weight:bold;
+            cursor:pointer;
+            transition:0.3s;
+        }
+
+        .faculty button{
+            background:#2563eb;
+            color:white;
+        }
+
+        .faculty button:hover{
+            background:#1d4ed8;
+        }
+
+        .student button{
+            background:#10b981;
+            color:white;
+        }
+
+        .student button:hover{
+            background:#059669;
+        }
+
+        .header{
+            position:absolute;
+            top:40px;
+            text-align:center;
+            width:100%;
+        }
+
+        .header h1{
+            font-size:42px;
+            margin-bottom:10px;
+        }
+
+        .header p{
+            color:#94a3b8;
+            font-size:16px;
+        }
+
+        @media(max-width:900px){
+            .container{
+                flex-direction:column;
+                margin-top:120px;
+            }
+
+            body{
+                height:auto;
+                padding:40px 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <h1>SEPPS</h1>
+        <p>Student Early Performance Prediction System</p>
+    </div>
+
+    <div class="container">
+
+        <!-- Faculty Card -->
+        <div class="card faculty">
+
+            <div class="top">
+                <div class="icon">👨‍🏫</div>
+
+                <h2>Faculty Portal</h2>
+
+                <p>
+                    Monitor student performance, upload academic datasets,
+                    analyse risk categories, and manage intervention planning.
+                </p>
+
+                <ul>
+                    <li>CSV Upload & Prediction</li>
+                    <li>Student Risk Analytics</li>
+                    <li>Leaderboard Monitoring</li>
+                    <li>Category Distribution</li>
+                    <li>Academic Intervention Planning</li>
+                </ul>
+            </div>
+
+            <button onclick="window.location.href='/dashboard'">
+                Continue as Faculty
+            </button>
+
+        </div>
+
+        <!-- Student Card -->
+        <div class="card student">
+
+            <div class="top">
+                <div class="icon">🎓</div>
+
+                <h2>Student Portal</h2>
+
+                <p>
+                    Track your academic progress, improve performance,
+                    follow personalised study goals, and prepare for your career.
+                </p>
+
+                <ul>
+                    <li>Performance Dashboard</li>
+                    <li>Leaderboard Ranking</li>
+                    <li>Weekly Academic Goals</li>
+                    <li>Personalised Timetable</li>
+                    <li>Career Guidance & Recommendations</li>
+                </ul>
+            </div>
+
+            <button onclick="window.location.href='/login'">
+                Continue as Student
+            </button>
+
+        </div>
+
+    </div>
+
+</body>
+</html>

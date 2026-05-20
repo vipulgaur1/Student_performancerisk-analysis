@@ -10,6 +10,7 @@
   </div>
 
   <form id="addStudentForm" onsubmit="submitForm(event)">
+    <!-- ── Basic Info ───────────────────────────────────────────────────────── -->
     <h3 style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:18px;margin-top:8px;">Basic Info</h3>
     <div class="grid">
       <div class="form-group">
@@ -39,43 +40,82 @@
       </div>
     </div>
 
+    <!-- ── Academic Metrics ────────────────────────────────────────────────── -->
     <h3 style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:18px;margin-top:24px;">Academic Metrics</h3>
     <div class="grid">
+
+      <!-- Numeric fields -->
       <div class="form-group">
         <label>Attendance (%)</label>
-        <input type="number" id="attendance" class="form-control" required min="0" max="100" placeholder="0–100">
+        <input type="number" id="attendance" class="form-control" required min="0" max="100" step="0.1" placeholder="0–100">
+      </div>
+      <div class="form-group">
+        <label>Mid Term Marks</label>
+        <input type="number" id="mid_term_marks" class="form-control" required min="0" max="100" step="0.1" placeholder="0–100">
       </div>
       <div class="form-group">
         <label>Class Test Score</label>
-        <input type="number" id="class_test_score" class="form-control" required min="0" max="100" placeholder="0–100">
+        <input type="number" id="class_test_score" class="form-control" required min="0" max="100" step="0.1" placeholder="0–100">
       </div>
       <div class="form-group">
-        <label>Assignment Score</label>
-        <input type="number" id="assignment_score" class="form-control" required min="0" max="100" placeholder="0–100">
+        <label>Quiz Average Score</label>
+        <input type="number" id="quiz_avg_score" class="form-control" required min="0" max="100" step="0.1" placeholder="0–100">
       </div>
       <div class="form-group">
-        <label>Study Hours / Day</label>
-        <input type="number" id="study_hours" class="form-control" required min="0" step="0.5" placeholder="e.g. 3.5">
+        <label>Assignment Completion (%)</label>
+        <input type="number" id="assignment_completion" class="form-control" required min="0" max="100" step="0.1" placeholder="0–100">
       </div>
       <div class="form-group">
-        <label>Doubts Logged</label>
-        <input type="number" id="doubt_count" class="form-control" required min="0" placeholder="e.g. 5">
+        <label>Assignment Delay <span style="color:var(--muted);font-weight:400;">(days late)</span></label>
+        <input type="number" id="assignment_delay" class="form-control" required min="0" max="30" step="1" placeholder="0 = on time">
       </div>
       <div class="form-group">
-        <label>Behavior Score (1–10)</label>
-        <input type="number" id="behavior_score" class="form-control" required min="1" max="10" placeholder="1–10">
+        <label>Previous Semester GPA</label>
+        <input type="number" id="previous_sem_gpa" class="form-control" required min="0" max="10" step="0.01" placeholder="0.00–10.00">
       </div>
       <div class="form-group">
         <label>Backlogs</label>
-        <select id="backlogs" class="form-control" required>
-          <option value="0">0 — None</option>
-          <option value="1">1 — Active</option>
+        <input type="number" id="backlogs" class="form-control" required min="0" max="20" step="1" placeholder="0 = none">
+      </div>
+
+      <!-- Categorical fields (0 = Low, 1 = Medium, 2 = High) -->
+      <div class="form-group">
+        <label>Class Participation</label>
+        <select id="class_participation" class="form-control" required>
+          <option value="0">0 — Low</option>
+          <option value="1">1 — Medium</option>
+          <option value="2">2 — High</option>
         </select>
       </div>
+      <div class="form-group">
+        <label>Doubt Asking</label>
+        <select id="doubt_asking" class="form-control" required>
+          <option value="0">0 — Low</option>
+          <option value="1">1 — Medium</option>
+          <option value="2">2 — High</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Attention Level</label>
+        <select id="attention_level" class="form-control" required>
+          <option value="0">0 — Low</option>
+          <option value="1">1 — Medium</option>
+          <option value="2">2 — High</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Behaviour</label>
+        <select id="behaviour" class="form-control" required>
+          <option value="0">0 — Low</option>
+          <option value="1">1 — Medium</option>
+          <option value="2">2 — High</option>
+        </select>
+      </div>
+
     </div>
 
     <div style="margin-top:28px;display:flex;gap:12px;justify-content:flex-end;">
-      <a href="/" class="btn btn-outline" style="text-decoration:none;">Cancel</a>
+      <a href="/dashboard" class="btn btn-outline" style="text-decoration:none;">Cancel</a>
       <button type="submit" class="btn" id="submitBtn">💾 Save Student &amp; Predict</button>
     </div>
   </form>
@@ -88,20 +128,32 @@ async function submitForm(e) {
   e.preventDefault();
   const btn = document.getElementById('submitBtn');
   btn.disabled = true; btn.textContent = '⏳ Saving…';
+
   const payload = {
-    student_id:       document.getElementById('student_id').value,
-    name:             document.getElementById('name').value,
-    branch:           document.getElementById('branch').value,
-    semester:         document.getElementById('semester').value,
-    year:             document.getElementById('year').value,
-    attendance:       parseFloat(document.getElementById('attendance').value),
-    class_test_score: parseFloat(document.getElementById('class_test_score').value),
-    assignment_score: parseFloat(document.getElementById('assignment_score').value),
-    study_hours:      parseFloat(document.getElementById('study_hours').value),
-    doubt_count:      parseInt(document.getElementById('doubt_count').value),
-    behavior_score:   parseInt(document.getElementById('behavior_score').value),
-    backlogs:         parseInt(document.getElementById('backlogs').value),
+    // Basic Info
+    student_id:           document.getElementById('student_id').value.trim(),
+    name:                 document.getElementById('name').value.trim(),
+    branch:               document.getElementById('branch').value,
+    semester:             parseInt(document.getElementById('semester').value),
+    year:                 parseInt(document.getElementById('year').value),
+
+    // Numeric academic metrics
+    attendance:           parseFloat(document.getElementById('attendance').value),
+    mid_term_marks:       parseFloat(document.getElementById('mid_term_marks').value),
+    class_test_score:     parseFloat(document.getElementById('class_test_score').value),
+    quiz_avg_score:       parseFloat(document.getElementById('quiz_avg_score').value),
+    assignment_completion:parseFloat(document.getElementById('assignment_completion').value),
+    assignment_delay:     parseFloat(document.getElementById('assignment_delay').value),
+    previous_sem_gpa:     parseFloat(document.getElementById('previous_sem_gpa').value),
+    backlogs:             parseInt(document.getElementById('backlogs').value),
+
+    // Categorical metrics (0 / 1 / 2)
+    class_participation:  parseInt(document.getElementById('class_participation').value),
+    doubt_asking:         parseInt(document.getElementById('doubt_asking').value),
+    attention_level:      parseInt(document.getElementById('attention_level').value),
+    behaviour:            parseInt(document.getElementById('behaviour').value),
   };
+
   try {
     const res  = await fetch('/api/students', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const data = await res.json();

@@ -23,7 +23,7 @@
   <div class="welcome-right">
     <div class="conf-label">Total Students</div>
     <div class="conf-value">{{ total }}</div>
-    <div class="conf-sub">Random Forest · 200 estimators</div>
+    <div class="conf-sub">Logistic Regression</div>
   </div>
 </div>
 
@@ -95,7 +95,8 @@
             <div class="rec-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ s_name or s.id or '—' }}</div>
             <div class="rec-detail">{{ s.id }} &nbsp;·&nbsp; {{ s.branch or '—' }}</div>
           </div>
-          <a href="/student/{{ s.id }}" class="tbl-btn tbl-btn-view" style="flex-shrink:0;">Deep Dive</a>
+          <a href="/dashboard/{{ s.id }}" class="tbl-btn" style="flex-shrink:0;background:var(--greenSoft);color:var(--green);border:1px solid rgba(22,163,74,0.2)">Portal</a>
+          <a href="/student/{{ s.id }}" class="tbl-btn tbl-btn-view" style="flex-shrink:0;">Details</a>
         </div>
         {% endfor %}
       </div>
@@ -144,7 +145,7 @@
   <div class="card">
     <div class="section-title">
       <div class="st-row"><span class="st-icon">🤖</span><span class="st-text">Batch ML Prediction</span></div>
-      <div class="st-sub">Re-run the Random Forest model on all existing records</div>
+      <div class="st-sub">Re-run the Logistic Regression model on all existing records</div>
     </div>
     <p style="color:var(--muted);font-size:13px;margin-bottom:16px;line-height:1.6;">
       Refreshes predictions for every student in the database. Use after updating student data or retraining the model.
@@ -159,15 +160,27 @@
     <div class="section-title" style="margin-bottom:0;">
       <div class="st-row"><span class="st-icon">🎓</span><span class="st-text">Student Roster</span></div>
     </div>
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
       <select id="categoryFilter" onchange="filterTable()" class="form-control" style="width:auto;padding:7px 12px;">
         <option value="all">All Categories</option>
         <option value="Weak">Weak</option>
         <option value="Average">Average</option>
         <option value="Advanced">Advanced</option>
       </select>
+      <select id="semesterFilter" onchange="filterTable()" class="form-control" style="width:auto;padding:7px 12px;">
+        <option value="all">All Semesters</option>
+      </select>
+      <select id="branchFilter" onchange="filterTable()" class="form-control" style="width:auto;padding:7px 12px;">
+        <option value="all">All Branches</option>
+      </select>
+      <select id="sectionFilter" onchange="filterTable()" class="form-control" style="width:auto;padding:7px 12px;">
+        <option value="all">All Sections</option>
+        <option value="A">Section A</option>
+        <option value="B">Section B</option>
+        <option value="C">Section C</option>
+      </select>
       <input type="text" id="searchInput" placeholder="Search name or ID…" oninput="filterTable()"
-        class="form-control" style="width:200px;" />
+        class="form-control" style="width:190px;" />
     </div>
   </div>
 
@@ -185,10 +198,14 @@
       <tbody>
         {% for student in students %}
         {% set display_name = student.name if (student.name and not student.name.startswith('Student ')) else '' %}
+        {% set section_val = ['A','B','C'][loop.index0 % 3] %}
         <tr id="row-{{ student.id }}"
             data-name="{{ (display_name or student.id or '') | lower }}"
             data-id="{{ (student.id or '') | lower }}"
-            data-category="{{ student.predicted_category or '' }}">
+            data-category="{{ student.predicted_category or '' }}"
+            data-semester="{{ student.semester or '' }}"
+            data-branch="{{ (student.branch or '') | upper }}"
+            data-section="{{ section_val }}">
           <td>
             <div class="name-cell">
               <div class="student-avatar">
@@ -230,7 +247,8 @@
           </td>
           <td>
             <div class="tbl-actions">
-              <a href="/student/{{ student.id }}" class="tbl-btn tbl-btn-view">View</a>
+              <a href="/student/{{ student.id }}" class="tbl-btn tbl-btn-view">Details</a>
+              <a href="/dashboard/{{ student.id }}" class="tbl-btn" style="background:var(--greenSoft);color:var(--green);border:1px solid rgba(22,163,74,0.2)">Portal</a>
               <button class="tbl-btn tbl-btn-del" onclick="deleteStudent('{{ student.id }}')">Del</button>
             </div>
           </td>
@@ -248,9 +266,46 @@
   <div style="margin-top:10px;font-size:12px;color:var(--sub);" id="rowCount"></div>
 </div>
 
+<!-- ── Weekly Academic Health Report ── -->
+{% if health %}
+<div class="card" style="margin-bottom:24px;">
+  <div class="section-title">
+    <div class="st-row"><span class="st-icon">📋</span><span class="st-text">Weekly Academic Health Report</span></div>
+    <div class="st-sub">Real-time snapshot of class health — updated on each dashboard load</div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;">
+
+    <div style="background:var(--redSoft);border:1px solid rgba(220,38,38,0.18);border-radius:10px;padding:16px 14px;text-align:center;">
+      <div style="font-size:28px;font-weight:900;color:var(--red);">{{ health.weak_count }}</div>
+      <div style="font-size:11px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:.05em;margin-top:4px;">⚠️ Weak Students</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Require immediate intervention</div>
+    </div>
+
+    <div style="background:var(--greenSoft);border:1px solid rgba(22,163,74,0.18);border-radius:10px;padding:16px 14px;text-align:center;">
+      <div style="font-size:28px;font-weight:900;color:var(--green);">{{ health.improved_count }}</div>
+      <div style="font-size:11px;font-weight:600;color:var(--green);text-transform:uppercase;letter-spacing:.05em;margin-top:4px;">📈 Improved</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">avg/advanced, no backlogs, 75%+ att</div>
+    </div>
+
+    <div style="background:var(--amberSoft);border:1px solid rgba(217,119,6,0.18);border-radius:10px;padding:16px 14px;text-align:center;">
+      <div style="font-size:28px;font-weight:900;color:var(--amber);">{{ health.att_drop_alerts }}</div>
+      <div style="font-size:11px;font-weight:600;color:var(--amber);text-transform:uppercase;letter-spacing:.05em;margin-top:4px;">📅 Attendance Alerts</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Students below 75% threshold</div>
+    </div>
+
+    <div style="background:var(--accentSoft);border:1px solid rgba(37,99,235,0.18);border-radius:10px;padding:16px 14px;text-align:center;">
+      <div style="font-size:28px;font-weight:900;color:var(--accent);">{{ health.avg_performance }}%</div>
+      <div style="font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;margin-top:4px;">📊 Avg Performance</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Class composite score · Att {{ health.avg_attendance }}%</div>
+    </div>
+
+  </div>
+</div>
+{% endif %}
+
 <!-- Footer -->
 <div class="footer">
-  <span>SEPPS — Student Early Performance Prediction System &nbsp;·&nbsp; Flask + SQLite + Random Forest</span>
+  <span>SEPPS — Student Early Performance Prediction System &nbsp;·&nbsp; Flask + SQLite + Logistic Regression</span>
   <span>© 2026 &nbsp;·&nbsp; Predictions are advisory only</span>
 </div>
 {% endblock %}
@@ -287,16 +342,49 @@
     }
   });
 
-  // ── Table filter (category dropdown + text search) ──
+  // ── Populate semester & branch dropdowns dynamically from table data ──
+  function populateFilters() {
+    const rows = document.querySelectorAll('#rosterTable tbody tr[data-name]');
+    const semesters = new Set();
+    const branches  = new Set();
+    rows.forEach(row => {
+      if (row.dataset.semester) semesters.add(row.dataset.semester);
+      if (row.dataset.branch)   branches.add(row.dataset.branch);
+    });
+
+    const semSel = document.getElementById('semesterFilter');
+    [...semesters].map(Number).sort((a,b)=>a-b).forEach(sem => {
+      const opt = document.createElement('option');
+      opt.value = String(sem); opt.textContent = 'Sem ' + sem;
+      semSel.appendChild(opt);
+    });
+
+    const brSel = document.getElementById('branchFilter');
+    [...branches].sort().forEach(br => {
+      const opt = document.createElement('option');
+      opt.value = br; opt.textContent = br;
+      brSel.appendChild(opt);
+    });
+  }
+  populateFilters();
+
+  // ── Table filter (category + semester + branch + section + text search) ──
   function filterTable() {
     const cat = document.getElementById('categoryFilter').value;
+    const sem = document.getElementById('semesterFilter').value;
+    const br  = document.getElementById('branchFilter').value;
+    const sec = document.getElementById('sectionFilter').value;
     const q   = document.getElementById('searchInput').value.toLowerCase();
     let visible = 0;
     document.querySelectorAll('#rosterTable tbody tr[data-name]').forEach(row => {
       const matchCat  = cat === 'all' || row.dataset.category === cat;
-      const matchText = !q || row.dataset.name.includes(q) || row.dataset.id.includes(q);
-      row.style.display = (matchCat && matchText) ? '' : 'none';
-      if (matchCat && matchText) visible++;
+      const matchSem  = sem === 'all' || row.dataset.semester === sem;
+      const matchBr   = br  === 'all' || row.dataset.branch   === br;
+      const matchSec  = sec === 'all' || row.dataset.section   === sec;
+      const matchText = !q  || row.dataset.name.includes(q) || row.dataset.id.includes(q);
+      const show = matchCat && matchSem && matchBr && matchSec && matchText;
+      row.style.display = show ? '' : 'none';
+      if (show) visible++;
     });
     const el = document.getElementById('rowCount');
     if (el) el.textContent = visible + ' student' + (visible !== 1 ? 's' : '') + ' shown';
@@ -342,11 +430,29 @@
   }
 
   // ── Batch predict ──
-  async function predictAll(btn) {
-    btn.textContent = '⏳ Predicting…'; btn.disabled = true;
-    const res = await fetch('/api/predict_all', { method: 'POST' });
-    if (res.ok) window.location.reload();
-    else { alert('Error running batch prediction.'); btn.textContent = '🔄 Refresh All Predictions'; btn.disabled = false; }
+  async function predictAll() {
+    const btn = document.getElementById('predictAllBtn');
+    if (!btn) return;
+    btn.disabled = true;
+    btn.textContent = '⏳ Running predictions…';
+    try {
+      const res  = await fetch('/api/predict_all', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        btn.textContent = '✅ Done! Reloading…';
+        setTimeout(() => window.location.reload(), 800);
+      } else {
+        btn.disabled = false;
+        btn.textContent = '🔮 Run All Predictions';
+        alert(data.error || 'Prediction failed.');
+      }
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = '🔮 Run All Predictions';
+      alert('Request failed. Is Flask running?');
+    }
   }
+
+  document.getElementById('predictAllBtn')?.addEventListener('click', predictAll);
 </script>
 {% endblock %}

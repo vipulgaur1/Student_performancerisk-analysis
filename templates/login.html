@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SEPPS — Portal Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #f8fafc;
+      --surface:    #f1f5f9;
+      --card:       #ffffff;
+      --border:     #e2e8f0;
+      --accent:     #2563eb;
+      --accentSoft: #eff6ff;
+      --green:      #16a34a;
+      --greenSoft:  #f0fdf4;
+      --red:        #dc2626;
+      --redSoft:    #fef2f2;
+      --amber:      #d97706;
+      --amberSoft:  #fffbeb;
+      --purple:     #7c3aed;
+      --purpleSoft: #f5f3ff;
+      --text:       #1e293b;
+      --muted:      #64748b;
+      --sub:        #94a3b8;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% -20%, rgba(37,99,235,0.10) 0%, transparent 60%),
+        var(--bg);
+      padding: 24px;
+    }
+
+    /* ── Brand header ── */
+    .brand {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .brand-icon {
+      width: 64px; height: 64px;
+      background: var(--accent);
+      border-radius: 18px;
+      display: inline-flex; align-items: center; justify-content: center;
+      margin-bottom: 16px;
+      box-shadow: 0 8px 24px rgba(37,99,235,0.25);
+    }
+
+    .brand-icon svg { width: 34px; height: 34px; }
+
+    .brand h1 {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+    }
+
+    .brand h1 span { color: var(--accent); }
+
+    .brand p {
+      margin-top: 6px;
+      font-size: 0.9rem;
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    /* ── Error banner ── */
+    .error-banner {
+      background: var(--redSoft);
+      border: 1px solid rgba(220,38,38,0.25);
+      color: var(--red);
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 24px;
+      max-width: 640px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .error-banner svg { flex-shrink: 0; }
+
+    /* ── Portal cards grid ── */
+    .portals {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      max-width: 640px;
+      width: 100%;
+    }
+
+    @media (max-width: 560px) {
+      .portals { grid-template-columns: 1fr; }
+    }
+
+    .portal-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      box-shadow: 0 2px 8px rgba(15,23,42,0.06);
+      transition: box-shadow 0.2s, transform 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .portal-card::before {
+      content: '';
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 3px;
+      border-radius: 16px 16px 0 0;
+    }
+
+    .portal-card.admin::before  { background: var(--accent); }
+    .portal-card.student::before { background: var(--green); }
+
+    .portal-card:hover {
+      box-shadow: 0 8px 28px rgba(15,23,42,0.12);
+      transform: translateY(-2px);
+    }
+
+    /* ── Card icon ── */
+    .card-icon {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .admin .card-icon  { background: var(--accentSoft); }
+    .student .card-icon { background: var(--greenSoft); }
+
+    .card-icon svg { width: 26px; height: 26px; }
+    .admin .card-icon svg  { stroke: var(--accent); }
+    .student .card-icon svg { stroke: var(--green); }
+
+    /* ── Card header ── */
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+
+    .card-title {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .card-title h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .card-title p {
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    /* ── Badge ── */
+    .role-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      margin-top: 4px;
+      width: fit-content;
+    }
+
+    .admin .role-badge  { background: var(--accentSoft); color: var(--accent); }
+    .student .role-badge { background: var(--greenSoft);  color: var(--green); }
+
+    /* ── Feature pills ── */
+    .features {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .feature-pill {
+      font-size: 0.72rem;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 20px;
+      color: var(--muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+
+    /* ── Admin button ── */
+    .btn-admin {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 11px 16px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.15s, box-shadow 0.15s;
+    }
+
+    .btn-admin:hover {
+      background: #1d4ed8;
+      box-shadow: 0 4px 14px rgba(37,99,235,0.35);
+    }
+
+    /* ── Student form ── */
+    .student-form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .input-wrap {
+      position: relative;
+    }
+
+    .input-wrap svg {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 16px; height: 16px;
+      stroke: var(--sub);
+      pointer-events: none;
+    }
+
+    .input-wrap input {
+      width: 100%;
+      padding: 10px 12px 10px 36px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 0.875rem;
+      font-family: inherit;
+      color: var(--text);
+      background: var(--surface);
+      transition: border-color 0.15s, box-shadow 0.15s;
+      outline: none;
+    }
+
+    .input-wrap input::placeholder { color: var(--sub); }
+
+    .input-wrap input:focus {
+      border-color: var(--green);
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(22,163,74,0.12);
+    }
+
+    .btn-student {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 11px 16px;
+      background: var(--green);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, box-shadow 0.15s;
+      font-family: inherit;
+    }
+
+    .btn-student:hover {
+      background: #15803d;
+      box-shadow: 0 4px 14px rgba(22,163,74,0.35);
+    }
+
+    .btn-student svg { width: 16px; height: 16px; stroke: #fff; }
+
+    .input-hint {
+      font-size: 0.72rem;
+      color: var(--sub);
+      text-align: center;
+    }
+
+    /* ── Divider ── */
+    .divider {
+      width: 1px;
+      background: var(--border);
+      align-self: stretch;
+      display: block;
+    }
+
+    @media (max-width: 560px) {
+      .divider { display: none; }
+    }
+
+    /* ── Footer ── */
+    .page-footer {
+      margin-top: 32px;
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--sub);
+    }
+
+    .page-footer a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .page-footer a:hover { text-decoration: underline; }
+
+    /* ── Info strip ── */
+    .info-strip {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+
+    .info-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .info-item svg { width: 14px; height: 14px; stroke: var(--sub); }
+
+    /* ── Spinner (on submit) ── */
+    .btn-student.loading .btn-text { display: none; }
+    .btn-student .spinner { display: none; }
+    .btn-student.loading .spinner { display: block; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Brand -->
+  <div class="brand">
+    <div class="brand-icon">
+      <svg viewBox="0 0 34 34" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 4L4 10v7c0 7.18 5.58 13.9 13 15.56C24.42 30.9 30 24.18 30 17v-7L17 4z"/>
+        <path d="M12 17l3 3 7-7"/>
+      </svg>
+    </div>
+    <h1>SEP<span>PS</span></h1>
+    <p>Student Early Performance Prediction System</p>
+  </div>
+
+  <!-- Error banner -->
+  {% if error %}
+  <div class="error-banner">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+      <circle cx="10" cy="10" r="8"/>
+      <line x1="10" y1="6" x2="10" y2="10"/>
+      <line x1="10" y1="14" x2="10.01" y2="14"/>
+    </svg>
+    {{ error }}
+  </div>
+  {% endif %}
+
+  <!-- Portal cards -->
+  <div class="portals">
+
+    <!-- Admin / Faculty card -->
+    <div class="portal-card admin">
+      <div class="card-header">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+        <div class="card-title">
+          <h2>Faculty &amp; Admin Portal</h2>
+          <p>Manage students, view analytics, and track cohort performance.</p>
+          <span class="role-badge">Admin / Faculty</span>
+        </div>
+      </div>
+
+      <div class="features">
+        <span class="feature-pill">📊 Analytics Dashboard</span>
+        <span class="feature-pill">👥 Student Manager</span>
+        <span class="feature-pill">🏆 Leaderboard</span>
+        <span class="feature-pill">🗓 Timetable</span>
+        <span class="feature-pill">📋 Reports</span>
+      </div>
+
+      <a href="/dashboard" class="btn-admin">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        Enter Admin Portal
+      </a>
+    </div>
+
+    <!-- Student card -->
+    <div class="portal-card student">
+      <div class="card-header">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+            <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+          </svg>
+        </div>
+        <div class="card-title">
+          <h2>Student Portal</h2>
+          <p>View your performance, goals, timetable, and career guidance.</p>
+          <span class="role-badge">Student Access</span>
+        </div>
+      </div>
+
+      <div class="features">
+        <span class="feature-pill">📈 My Dashboard</span>
+        <span class="feature-pill">🎯 Weekly Goals</span>
+        <span class="feature-pill">🚀 Career Hub</span>
+        <span class="feature-pill">📅 My Timetable</span>
+        <span class="feature-pill">🏅 My Rank</span>
+      </div>
+
+      <form class="student-form" method="POST" action="/student/lookup" id="studentForm">
+        <div class="input-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="5" width="20" height="14" rx="2"/>
+            <path d="M2 10h20"/>
+          </svg>
+          <input
+            type="text"
+            name="student_id"
+            id="studentIdInput"
+            placeholder="Enter your Student ID (e.g. S001)"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            required
+          />
+        </div>
+        <button type="submit" class="btn-student" id="lookupBtn">
+          <span class="btn-text" style="display:flex;align-items:center;gap:8px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            View My Dashboard
+          </span>
+          <span class="spinner"></span>
+        </button>
+        <p class="input-hint">Use the Student ID provided by your faculty.</p>
+      </form>
+    </div>
+
+  </div>
+
+  <!-- Info strip -->
+  <div class="info-strip">
+    <div class="info-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+      Secure &amp; read-only access
+    </div>
+    <div class="info-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <polyline points="12 6 12 12 16 14"/>
+      </svg>
+      Real-time predictions
+    </div>
+    <div class="info-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+      AI-driven guidance
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="page-footer">
+    <p>SEPPS Academic Intelligence Platform &nbsp;·&nbsp; <a href="/dashboard">Admin Dashboard</a> &nbsp;·&nbsp; <a href="/leaderboard">Leaderboard</a></p>
+  </div>
+
+  <script>
+    // Auto-uppercase student ID as user types
+    const input = document.getElementById('studentIdInput');
+    if (input) {
+      input.addEventListener('input', function() {
+        const pos = this.selectionStart;
+        this.value = this.value.toUpperCase();
+        this.setSelectionRange(pos, pos);
+      });
+    }
+
+    // Show spinner on form submit
+    const form = document.getElementById('studentForm');
+    const btn  = document.getElementById('lookupBtn');
+    if (form && btn) {
+      form.addEventListener('submit', function() {
+        btn.classList.add('loading');
+        btn.disabled = true;
+      });
+    }
+
+    // Pre-fill from query param ?id=
+    const params = new URLSearchParams(window.location.search);
+    const prefill = params.get('id');
+    if (prefill && input) {
+      input.value = prefill.toUpperCase();
+    }
+  </script>
+</body>
+</html>
